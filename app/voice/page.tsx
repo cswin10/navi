@@ -46,8 +46,8 @@ export default function VoicePage() {
         console.log('[App] User authenticated:', user.id);
 
         // Create session for this user
-        const { data, error } = await supabase
-          .from('sessions')
+        const { data, error } = await (supabase
+          .from('sessions') as any)
           .insert({ user_id: user.id })
           .select()
           .single();

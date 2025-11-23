@@ -56,8 +56,8 @@ export default function TasksPage() {
       return
     }
 
-    const { data, error } = await supabase
-      .from('tasks')
+    const { data, error } = await (supabase
+      .from('tasks') as any)
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
@@ -85,8 +85,8 @@ export default function TasksPage() {
     if (!draggedTask) return
 
     const supabase = createClient()
-    const { error } = await supabase
-      .from('tasks')
+    const { error } = await (supabase
+      .from('tasks') as any)
       .update({ status })
       .eq('id', draggedTask.id)
 
@@ -107,8 +107,8 @@ export default function TasksPage() {
 
     if (!user) return
 
-    const { data, error } = await supabase
-      .from('tasks')
+    const { data, error } = await (supabase
+      .from('tasks') as any)
       .insert({
         user_id: user.id,
         title,
@@ -131,8 +131,8 @@ export default function TasksPage() {
     if (!editingTask || !title.trim()) return
 
     const supabase = createClient()
-    const { data, error } = await supabase
-      .from('tasks')
+    const { data, error } = await (supabase
+      .from('tasks') as any)
       .update({
         title,
         notes: notes || null,
@@ -154,8 +154,8 @@ export default function TasksPage() {
     if (!confirm('Are you sure you want to delete this task?')) return
 
     const supabase = createClient()
-    const { error } = await supabase
-      .from('tasks')
+    const { error } = await (supabase
+      .from('tasks') as any)
       .delete()
       .eq('id', taskId)
 

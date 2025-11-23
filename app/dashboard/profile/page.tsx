@@ -41,8 +41,8 @@ export default function ProfilePage() {
       return
     }
 
-    const { data, error } = await supabase
-      .from('user_profiles')
+    const { data, error } = await (supabase
+      .from('user_profiles') as any)
       .select('*')
       .eq('id', user.id)
       .single()
@@ -63,8 +63,8 @@ export default function ProfilePage() {
 
     try {
       const supabase = createClient()
-      const { error } = await supabase
-        .from('user_profiles')
+      const { error } = await (supabase
+        .from('user_profiles') as any)
         .update({
           name,
           context_memory: contextMemory,

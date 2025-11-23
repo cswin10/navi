@@ -3,6 +3,7 @@ import nodemailer from 'nodemailer';
 import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, SendEmailParams } from '@/lib/types';
 import { getCurrentUser, createClient } from '@/lib/auth';
 import { decrypt } from '@/lib/encryption';
+import type { Database } from '@/lib/database.types';
 
 export async function POST(request: NextRequest) {
   console.log('[Execute API] Starting action execution...');
@@ -33,8 +34,8 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
 
     // Create action record in database
-    const { data: action, error: actionError } = await supabase
-      .from('actions')
+    const { data: action, error: actionError } = await (supabase
+      .from('actions') as any)
       .insert({
         user_id: user.id,
         session_id: sessionId,
@@ -70,8 +71,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Update action status
-    await supabase
-      .from('actions')
+    await (supabase
+      .from('actions') as any)
       .update({
         execution_status: result.success ? 'completed' : 'failed',
         execution_result: result,
@@ -106,8 +107,8 @@ async function executeCreateTask(userId: string, params: CreateTaskParams): Prom
     const supabase = await createClient();
 
     // Create task in database
-    const { data: task, error } = await supabase
-      .from('tasks')
+    const { data: task, error } = await (supabase
+      .from('tasks') as any)
       .insert({
         user_id: userId,
         title: params.title,
@@ -147,8 +148,8 @@ async function executeSendEmail(userId: string, params: SendEmailParams): Promis
     const supabase = await createClient();
 
     // Get user's email integration
-    const { data: integration, error: integrationError } = await supabase
-      .from('user_integrations')
+    const { data: integration, error: integrationError } = await (supabase
+      .from('user_integrations') as any)
       .select('credentials')
       .eq('user_id', userId)
       .eq('integration_type', 'email')

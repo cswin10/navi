@@ -34,8 +34,8 @@ export default function DashboardLayout({
       }
 
       // Get user profile
-      const { data: profile } = await supabase
-        .from('user_profiles')
+      const { data: profile } = await (supabase
+        .from('user_profiles') as any)
         .select('name')
         .eq('id', user.id)
         .single()

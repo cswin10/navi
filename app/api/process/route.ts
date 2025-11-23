@@ -8,6 +8,17 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+async function getSessionActions(sessionId: string) {
+  const supabase = await createClient();
+  const { data } = await (supabase
+    .from('actions') as any)
+    .select('transcript, execution_result')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: true });
+
+  return data || [];
+}
+
 function buildSystemPrompt(userName?: string, contextMemory?: any) {
   const today = new Date();
   const contextString = contextMemory && typeof contextMemory === 'object' && Object.keys(contextMemory).length > 0
@@ -77,8 +88,8 @@ export async function POST(request: NextRequest) {
 
     // Get user profile for personalization
     const supabase = await createClient();
-    const { data: profile } = await supabase
-      .from('user_profiles')
+    const { data: profile } = await (supabase
+      .from('user_profiles') as any)
       .select('name, context_memory')
       .eq('id', user.id)
       .single();
@@ -91,7 +102,7 @@ export async function POST(request: NextRequest) {
       const history = await getSessionActions(sessionId);
       if (history.length > 0) {
         conversationContext = '\n\nPrevious conversation history:\n';
-        history.slice(-5).forEach((item) => { // Last 5 interactions
+        history.slice(-5).forEach((item: any) => { // Last 5 interactions
           conversationContext += `User: ${item.transcript}\n`;
           if (item.execution_result && typeof item.execution_result === 'object' && 'response' in item.execution_result) {
             conversationContext += `Navi: ${item.execution_result.response}\n`;

@@ -24,8 +24,8 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
 
     // Check if integration already exists
-    const { data: existing } = await supabase
-      .from('user_integrations')
+    const { data: existing } = await (supabase
+      .from('user_integrations') as any)
       .select('id')
       .eq('user_id', user.id)
       .eq('integration_type', 'email')
@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       // Update existing integration
-      const { error } = await supabase
-        .from('user_integrations')
+      const { error } = await (supabase
+        .from('user_integrations') as any)
         .update({
           credentials: {
             email,
@@ -49,8 +49,8 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Create new integration
-      const { error } = await supabase
-        .from('user_integrations')
+      const { error } = await (supabase
+        .from('user_integrations') as any)
         .insert({
           user_id: user.id,
           integration_type: 'email',
@@ -84,8 +84,8 @@ export async function DELETE(request: NextRequest) {
     const user = await getCurrentUser()
     const supabase = await createClient()
 
-    const { error } = await supabase
-      .from('user_integrations')
+    const { error } = await (supabase
+      .from('user_integrations') as any)
       .delete()
       .eq('user_id', user.id)
       .eq('integration_type', 'email')

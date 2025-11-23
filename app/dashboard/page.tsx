@@ -50,8 +50,8 @@ export default function DashboardPage() {
       }
 
       // Load tasks
-      const { data: tasks } = await supabase
-        .from('tasks')
+      const { data: tasks } = await (supabase
+        .from('tasks') as any)
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -61,10 +61,10 @@ export default function DashboardPage() {
 
         setStats({
           totalTasks: tasks.length,
-          todoTasks: tasks.filter(t => t.status === 'todo').length,
-          inProgressTasks: tasks.filter(t => t.status === 'in_progress').length,
-          completedTasks: tasks.filter(t => t.status === 'done').length,
-          todayTasks: tasks.filter(t => t.due_date === today).length,
+          todoTasks: tasks.filter((t: any) => t.status === 'todo').length,
+          inProgressTasks: tasks.filter((t: any) => t.status === 'in_progress').length,
+          completedTasks: tasks.filter((t: any) => t.status === 'done').length,
+          todayTasks: tasks.filter((t: any) => t.due_date === today).length,
         })
 
         setRecentTasks(tasks.slice(0, 5))
