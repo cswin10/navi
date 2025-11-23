@@ -1,21 +1,29 @@
 import { createClient } from '@supabase/supabase-js';
 import { Session, Action } from './types';
 
-// Client-side Supabase client
-export const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Lazy initialize client-side Supabase client
+export function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
-// Server-side Supabase client with service key (for API routes)
-export const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
+// Lazy initialize server-side Supabase client with service key (for API routes)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  );
+}
+
+// Export for backwards compatibility (client-side only)
+export const supabase = typeof window !== 'undefined' ? getSupabaseClient() : null as any;
 
 // Database helper functions
 export async function createSession(userId: string | null = null): Promise<Session | null> {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const { data, error } = await supabaseAdmin
       .from('sessions')
       .insert({ user_id: userId })
@@ -36,6 +44,7 @@ export async function createSession(userId: string | null = null): Promise<Sessi
 
 export async function createAction(action: Omit<Action, 'id' | 'created_at'>): Promise<Action | null> {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const { data, error } = await supabaseAdmin
       .from('actions')
       .insert(action)
@@ -61,6 +70,7 @@ export async function updateActionStatus(
   proofLink?: string
 ): Promise<boolean> {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const { error } = await supabaseAdmin
       .from('actions')
       .update({
@@ -84,6 +94,7 @@ export async function updateActionStatus(
 
 export async function getSessionActions(sessionId: string): Promise<Action[]> {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const { data, error } = await supabaseAdmin
       .from('actions')
       .select('*')
