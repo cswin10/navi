@@ -1,45 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Client } from '@notionhq/client';
 import nodemailer from 'nodemailer';
 import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, SendEmailParams } from '@/lib/types';
-import { createAction, updateActionStatus } from '@/lib/supabase';
-
-// Lazy initialize Notion client
-function getNotionClient() {
-  return new Client({
-    auth: process.env.NOTION_API_KEY,
-  });
-}
-
-// Format Notion ID to UUID format (with hyphens)
-function formatNotionId(id: string): string {
-  // Remove any existing hyphens
-  const clean = id.replace(/-/g, '');
-
-  // If already 32 characters, format as UUID: 8-4-4-4-12
-  if (clean.length === 32) {
-    return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`;
-  }
-
-  // Otherwise return as-is
-  return id;
-}
-
-// Lazy initialize Gmail transporter
-function getGmailTransporter() {
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD, // Use App Password, not regular password
-    },
-  });
-}
+import { getCurrentUser, createClient } from '@/lib/auth';
+import { decrypt } from '@/lib/encryption';
+import type { Database } from '@/lib/database.types';
 
 export async function POST(request: NextRequest) {
   console.log('[Execute API] Starting action execution...');
 
   try {
+    // Verify authentication
+    const user = await getCurrentUser();
+    console.log('[Execute API] Authenticated user:', user.id);
+
     const body = await request.json();
     const { intent, sessionId, transcript } = body as {
       intent: ClaudeIntentResponse;
@@ -58,18 +31,24 @@ export async function POST(request: NextRequest) {
     console.log('[Execute API] Intent:', intent.intent);
     console.log('[Execute API] Parameters:', intent.parameters);
 
-    // Create action record in database
-    const action = await createAction({
-      session_id: sessionId,
-      transcript: transcript || '',
-      intent: intent.intent,
-      parameters: intent.parameters,
-      execution_status: 'pending',
-      execution_result: null,
-      proof_link: null,
-    });
+    const supabase = await createClient();
 
-    if (!action) {
+    // Create action record in database
+    const { data: action, error: actionError } = await (supabase
+      .from('actions') as any)
+      .insert({
+        user_id: user.id,
+        session_id: sessionId,
+        transcript: transcript || '',
+        intent: intent.intent,
+        parameters: intent.parameters,
+        execution_status: 'pending',
+        execution_result: null,
+      })
+      .select()
+      .single();
+
+    if (actionError || !action) {
       throw new Error('Failed to create action record');
     }
 
@@ -80,22 +59,27 @@ export async function POST(request: NextRequest) {
     // Execute based on intent type
     switch (intent.intent) {
       case 'create_task':
-        result = await executeNotionTask(intent.parameters as CreateTaskParams);
+        result = await executeCreateTask(user.id, intent.parameters as CreateTaskParams);
         break;
+
       case 'send_email':
-        result = await executeGmailSend(intent.parameters as SendEmailParams);
+        result = await executeSendEmail(user.id, intent.parameters as SendEmailParams);
         break;
+
       default:
-        throw new Error(`Unsupported intent: ${intent.intent}`);
+        throw new Error(`Unknown intent: ${intent.intent}`);
     }
 
-    console.log('[Execute API] Execution result:', result);
-
     // Update action status
-    const proofLink = result.notion_url || undefined;
-    await updateActionStatus(action.id, result.success ? 'completed' : 'failed', result, proofLink);
+    await (supabase
+      .from('actions') as any)
+      .update({
+        execution_status: result.success ? 'completed' : 'failed',
+        execution_result: result,
+      })
+      .eq('id', action.id);
 
-    console.log('[Execute API] Execution completed successfully');
+    console.log('[Execute API] Execution complete:', result.success);
 
     return NextResponse.json<ExecuteResponse>({
       success: true,
@@ -103,7 +87,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('[Execute API] Error:', error);
-
     return NextResponse.json<ExecuteResponse>(
       {
         success: false,
@@ -115,308 +98,97 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Generate capitalization variations for a property name
- * e.g., "due date" -> ["due date", "Due Date", "Due date", "DUE DATE"]
+ * Create a task in NaviOS database
  */
-function generateCapitalizations(name: string): string[] {
-  const variations = new Set<string>();
-
-  // Original
-  variations.add(name);
-
-  // All lowercase
-  variations.add(name.toLowerCase());
-
-  // Title Case (Each Word Capitalized)
-  variations.add(name.split(' ').map(word =>
-    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-  ).join(' '));
-
-  // First word capitalized only
-  const words = name.split(' ');
-  if (words.length > 0) {
-    variations.add(
-      words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase() +
-      (words.length > 1 ? ' ' + words.slice(1).join(' ').toLowerCase() : '')
-    );
-  }
-
-  // ALL CAPS
-  variations.add(name.toUpperCase());
-
-  return Array.from(variations);
-}
-
-/**
- * Create a task in Notion
- */
-async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionResult> {
+async function executeCreateTask(userId: string, params: CreateTaskParams): Promise<ExecutionResult> {
   try {
-    console.log('[Notion] Creating task:', params);
+    console.log('[Execute] Creating task:', params);
 
-    const notionApiKey = process.env.NOTION_API_KEY;
-    const notionDatabaseIdRaw = process.env.NOTION_DATABASE_ID;
+    const supabase = await createClient();
 
-    if (!notionApiKey) {
-      throw new Error('NOTION_API_KEY not configured');
-    }
-    if (!notionDatabaseIdRaw) {
-      throw new Error('NOTION_DATABASE_ID not configured');
-    }
+    // Create task in database
+    const { data: task, error } = await (supabase
+      .from('tasks') as any)
+      .insert({
+        user_id: userId,
+        title: params.title,
+        priority: params.priority || 'medium',
+        status: 'todo',
+        due_date: params.due_date,
+      })
+      .select()
+      .single();
 
-    // Format database ID to UUID format with hyphens
-    const notionDatabaseId = formatNotionId(notionDatabaseIdRaw);
-    console.log('[Notion] Database ID (formatted):', notionDatabaseId);
-
-    // Parse due date
-    let dueDate = null;
-    if (params.due_date) {
-      try {
-        dueDate = new Date(params.due_date).toISOString().split('T')[0];
-      } catch (e) {
-        console.warn('[Notion] Invalid due date:', params.due_date);
-      }
+    if (error) {
+      throw new Error(`Database error: ${error.message}`);
     }
 
-    // Create page in Notion database
-    const notion = getNotionClient();
-
-    console.log('[Notion] Creating page in database:', notionDatabaseId);
-
-    // Step 1: Find the correct title property name by trying with just the title
-    const titleBaseNames = ['task', 'name', 'title', 'todo', 'item'];
-    let titlePropertyName: string | null = null;
-    let lastTitleError;
-
-    console.log('[Notion] Step 1: Finding title property name...');
-
-    for (const base of titleBaseNames) {
-      const variations = generateCapitalizations(base);
-
-      for (const titleProp of variations) {
-        try {
-          console.log(`[Notion] Trying title property: "${titleProp}"`);
-
-          const testResponse = await notion.pages.create({
-            parent: {
-              database_id: notionDatabaseId,
-            },
-            properties: {
-              [titleProp]: {
-                title: [{ text: { content: params.title } }],
-              },
-            },
-          });
-
-          titlePropertyName = titleProp;
-          console.log(`[Notion] ✓ Found working title property: "${titleProp}"`);
-
-          // If we don't need optional fields, we're done!
-          if (!dueDate && !params.priority) {
-            console.log('[Notion] Task created (title only):', testResponse.id);
-            const pageId = testResponse.id.replace(/-/g, '');
-            return {
-              success: true,
-              task_id: testResponse.id,
-              notion_url: `https://www.notion.so/${pageId}`,
-            };
-          }
-
-          // Delete the test page since we'll create a proper one with all fields
-          try {
-            await notion.pages.update({
-              page_id: testResponse.id,
-              archived: true,
-            });
-          } catch (e) {
-            // Ignore deletion errors
-          }
-
-          break; // Found it, exit variations loop
-        } catch (error: any) {
-          lastTitleError = error;
-          if (!error.body?.message?.includes('does not exist')) {
-            // Not a property name issue, throw it
-            throw error;
-          }
-        }
-      }
-
-      if (titlePropertyName) break; // Found it, exit base names loop
-    }
-
-    if (!titlePropertyName) {
-      throw new Error(`Could not find title property. Tried: ${titleBaseNames.join(', ')} with various capitalizations. Last error: ${lastTitleError?.body?.message || lastTitleError?.message}`);
-    }
-
-    // Step 2: Now create the final page with optional fields
-    console.log('[Notion] Step 2: Creating page with optional fields...');
-
-    const properties: any = {
-      [titlePropertyName]: {
-        title: [{ text: { content: params.title } }],
-      },
-    };
-
-    // Try to add due date
-    if (dueDate) {
-      const dueDateBaseNames = ['due date', 'due', 'date', 'deadline'];
-      let dueDateAdded = false;
-
-      for (const base of dueDateBaseNames) {
-        if (dueDateAdded) break;
-        const variations = generateCapitalizations(base);
-
-        for (const dueDateProp of variations) {
-          properties[dueDateProp] = {
-            date: { start: dueDate },
-          };
-
-          // Test if this property works
-          try {
-            console.log(`[Notion] Trying due date property: "${dueDateProp}"`);
-            await notion.pages.create({
-              parent: { database_id: notionDatabaseId },
-              properties: {
-                [titlePropertyName]: {
-                  title: [{ text: { content: '_test_' } }],
-                },
-                [dueDateProp]: {
-                  date: { start: dueDate },
-                },
-              },
-            }).then(async (testPage) => {
-              // Clean up test page
-              await notion.pages.update({ page_id: testPage.id, archived: true }).catch(() => {});
-            });
-
-            console.log(`[Notion] ✓ Found due date property: "${dueDateProp}"`);
-            dueDateAdded = true;
-            break;
-          } catch (e: any) {
-            delete properties[dueDateProp]; // Remove if it didn't work
-            if (!e.body?.message?.includes('does not exist')) {
-              console.log(`[Notion] Due date property "${dueDateProp}" exists but errored, skipping optional fields`);
-              break;
-            }
-          }
-        }
-      }
-
-      if (!dueDateAdded) {
-        console.log('[Notion] Could not find due date property, proceeding without it');
-      }
-    }
-
-    // Try to add priority
-    if (params.priority) {
-      const priorityBaseNames = ['priority level', 'priority', 'importance'];
-      let priorityAdded = false;
-
-      for (const base of priorityBaseNames) {
-        if (priorityAdded) break;
-        const variations = generateCapitalizations(base);
-
-        for (const priorityProp of variations) {
-          properties[priorityProp] = {
-            select: {
-              name: params.priority.charAt(0).toUpperCase() + params.priority.slice(1),
-            },
-          };
-
-          // Test if this property works
-          try {
-            console.log(`[Notion] Trying priority property: "${priorityProp}"`);
-            await notion.pages.create({
-              parent: { database_id: notionDatabaseId },
-              properties: {
-                [titlePropertyName]: {
-                  title: [{ text: { content: '_test_' } }],
-                },
-                [priorityProp]: {
-                  select: {
-                    name: params.priority.charAt(0).toUpperCase() + params.priority.slice(1),
-                  },
-                },
-              },
-            }).then(async (testPage) => {
-              // Clean up test page
-              await notion.pages.update({ page_id: testPage.id, archived: true }).catch(() => {});
-            });
-
-            console.log(`[Notion] ✓ Found priority property: "${priorityProp}"`);
-            priorityAdded = true;
-            break;
-          } catch (e: any) {
-            delete properties[priorityProp]; // Remove if it didn't work
-            if (!e.body?.message?.includes('does not exist')) {
-              console.log(`[Notion] Priority property "${priorityProp}" exists but errored, skipping`);
-              break;
-            }
-          }
-        }
-      }
-
-      if (!priorityAdded) {
-        console.log('[Notion] Could not find priority property, proceeding without it');
-      }
-    }
-
-    // Step 3: Create the final page with all working properties
-    console.log('[Notion] Step 3: Creating final page with properties:', Object.keys(properties).join(', '));
-
-    const response = await notion.pages.create({
-      parent: {
-        database_id: notionDatabaseId,
-      },
-      properties,
-    });
-
-    console.log('[Notion] Task created successfully:', response.id);
-
-    // Construct Notion URL from page ID
-    const pageId = response.id.replace(/-/g, '');
-    const notionUrl = `https://www.notion.so/${pageId}`;
+    console.log('[Execute] Task created:', task.id);
 
     return {
       success: true,
-      task_id: response.id,
-      notion_url: notionUrl,
+      task_id: task.id,
     };
   } catch (error: any) {
-    console.error('[Notion] Error creating task:', error);
+    console.error('[Execute] Task creation failed:', error);
     return {
       success: false,
-      error: error.message || 'Failed to create Notion task',
+      error: error.message || 'Failed to create task',
     };
   }
 }
 
 /**
- * Send email via Gmail
+ * Send an email using user's connected email account
  */
-async function executeGmailSend(params: SendEmailParams): Promise<ExecutionResult> {
+async function executeSendEmail(userId: string, params: SendEmailParams): Promise<ExecutionResult> {
   try {
-    console.log('[Gmail] Sending email to:', params.to);
+    console.log('[Execute] Sending email:', { to: params.to, subject: params.subject });
+
+    const supabase = await createClient();
+
+    // Get user's email integration
+    const { data: integration, error: integrationError } = await (supabase
+      .from('user_integrations') as any)
+      .select('credentials')
+      .eq('user_id', userId)
+      .eq('integration_type', 'email')
+      .eq('is_active', true)
+      .single();
+
+    if (integrationError || !integration) {
+      throw new Error('No email account connected. Please connect your email in Settings → Integrations.');
+    }
+
+    // Decrypt credentials
+    const credentials = integration.credentials as { email: string; app_password: string };
+    const decryptedPassword = decrypt(credentials.app_password);
+
+    // Create transporter with user's credentials
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: credentials.email,
+        pass: decryptedPassword,
+      },
+    });
 
     // Send email
-    const gmailTransporter = getGmailTransporter();
-    const info = await gmailTransporter.sendMail({
-      from: process.env.GMAIL_USER,
+    const info = await transporter.sendMail({
+      from: credentials.email,
       to: params.to,
       subject: params.subject,
       text: params.body,
-      html: `<p>${params.body.replace(/\n/g, '<br>')}</p>`,
     });
 
-    console.log('[Gmail] Email sent:', info.messageId);
+    console.log('[Execute] Email sent:', info.messageId);
 
     return {
       success: true,
       message_id: info.messageId,
     };
   } catch (error: any) {
-    console.error('[Gmail] Error sending email:', error);
+    console.error('[Execute] Email send failed:', error);
     return {
       success: false,
       error: error.message || 'Failed to send email',

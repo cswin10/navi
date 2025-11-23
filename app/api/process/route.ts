@@ -1,20 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { ClaudeIntentResponse, ProcessResponse } from '@/lib/types';
-import { getSessionActions } from '@/lib/supabase';
+import { getCurrentUser } from '@/lib/auth';
+import { createClient } from '@/lib/auth';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const SYSTEM_PROMPT = `You are Navi, a concise voice-first AI personal operator.
+async function getSessionActions(sessionId: string) {
+  const supabase = await createClient();
+  const { data } = await (supabase
+    .from('actions') as any)
+    .select('transcript, execution_result')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: true });
 
-Today's date: ${new Date().toLocaleDateString('en-GB')} (UK format: DD/MM/YYYY)
-Current ISO date: ${new Date().toISOString().split('T')[0]}
+  return data || [];
+}
 
-IMPORTANT: User is in UK timezone. When they say "tomorrow", calculate from today's date above.
+function buildSystemPrompt(userName?: string, contextMemory?: any) {
+  const today = new Date();
+  const contextString = contextMemory && typeof contextMemory === 'object' && Object.keys(contextMemory).length > 0
+    ? `\n\nContext about ${userName || 'this user'}:\n${Object.entries(contextMemory).map(([key, value]) => `- ${key}: ${value}`).join('\n')}`
+    : '';
 
-You have memory of past conversations. Use context to be helpful.
+  return `You are Navi, ${userName ? `${userName}'s` : 'a'} concise voice-first AI personal operator.
+
+Today's date: ${today.toLocaleDateString('en-GB')} (UK format: DD/MM/YYYY)
+Current ISO date: ${today.toISOString().split('T')[0]}
+
+IMPORTANT: User is in UK timezone. When they say "tomorrow", calculate from today's date above.${contextString}
+
+You have memory of past conversations. Use context to be helpful and personalized.
 
 IMPORTANT RULES:
 - Keep responses SHORT (1-2 sentences max)
@@ -45,11 +63,16 @@ Examples:
 - User: "create a task" → intent: "other", response: "What should the task be?"
 - User: "task about demo tomorrow" → intent: "create_task", response: "I'll create a task 'demo' due tomorrow. Proceed?"
 - User: "hi" → intent: "other", response: "Hey! What do you need?"`;
+}
 
 export async function POST(request: NextRequest) {
   console.log('[Process API] Starting intent parsing...');
 
   try {
+    // Verify authentication
+    const user = await getCurrentUser();
+    console.log('[Process API] Authenticated user:', user.id);
+
     const body = await request.json();
     const { text, sessionId } = body;
 
@@ -63,13 +86,23 @@ export async function POST(request: NextRequest) {
 
     console.log('[Process API] Processing text:', text);
 
+    // Get user profile for personalization
+    const supabase = await createClient();
+    const { data: profile } = await (supabase
+      .from('user_profiles') as any)
+      .select('name, context_memory')
+      .eq('id', user.id)
+      .single();
+
+    const systemPrompt = buildSystemPrompt(profile?.name, profile?.context_memory);
+
     // Fetch conversation history for context (if sessionId provided)
     let conversationContext = '';
     if (sessionId) {
       const history = await getSessionActions(sessionId);
       if (history.length > 0) {
         conversationContext = '\n\nPrevious conversation history:\n';
-        history.slice(-5).forEach((item) => { // Last 5 interactions
+        history.slice(-5).forEach((item: any) => { // Last 5 interactions
           conversationContext += `User: ${item.transcript}\n`;
           if (item.execution_result && typeof item.execution_result === 'object' && 'response' in item.execution_result) {
             conversationContext += `Navi: ${item.execution_result.response}\n`;
@@ -82,7 +115,7 @@ export async function POST(request: NextRequest) {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-5-20250929',
       max_tokens: 1024,
-      system: SYSTEM_PROMPT + conversationContext,
+      system: systemPrompt + conversationContext,
       messages: [
         {
           role: 'user',
