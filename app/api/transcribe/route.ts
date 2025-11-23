@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { TranscriptionResponse } from '@/lib/types';
+import { getCurrentUser } from '@/lib/auth';
 
 // Lazy initialize OpenAI client
 function getOpenAIClient() {
@@ -13,6 +14,10 @@ export async function POST(request: NextRequest) {
   console.log('[Transcribe API] Starting transcription request...');
 
   try {
+    // Verify authentication
+    const user = await getCurrentUser();
+    console.log('[Transcribe API] Authenticated user:', user.id);
+
     const formData = await request.formData();
     const audioFile = formData.get('audio') as File;
 

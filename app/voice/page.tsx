@@ -1,19 +1,24 @@
 'use client';
 
-// Navi V1 MVP - Voice-first AI Personal Operator
+// NaviOS - Voice-first AI Personal Operating System
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import VoiceInput from '@/components/VoiceInput';
 import TranscriptDisplay from '@/components/TranscriptDisplay';
 import ConfirmationPanel from '@/components/ConfirmationPanel';
 import ProofPanel from '@/components/ProofPanel';
 import { AppState, ActionState } from '@/lib/types';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-browser';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, LogOut, LayoutDashboard } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/Button';
 
-export default function Home() {
+export default function VoicePage() {
+  const router = useRouter();
   const [appState, setAppState] = useState<AppState>('idle');
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [actionState, setActionState] = useState<ActionState>({
     transcript: '',
     intent: null,
@@ -22,13 +27,28 @@ export default function Home() {
     error: null,
   });
 
-  // Initialize session
+  // Initialize user and session
   useEffect(() => {
-    async function initSession() {
+    async function initUserAndSession() {
       try {
+        const supabase = createClient();
+
+        // Get current user
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+          console.error('[App] Not authenticated');
+          router.push('/login');
+          return;
+        }
+
+        setUserId(user.id);
+        console.log('[App] User authenticated:', user.id);
+
+        // Create session for this user
         const { data, error } = await supabase
           .from('sessions')
-          .insert({ user_id: null })
+          .insert({ user_id: user.id })
           .select()
           .single();
 
@@ -37,12 +57,18 @@ export default function Home() {
         setSessionId(data.id);
         console.log('[App] Session created:', data.id);
       } catch (error) {
-        console.error('[App] Failed to create session:', error);
+        console.error('[App] Failed to initialize:', error);
       }
     }
 
-    initSession();
-  }, []);
+    initUserAndSession();
+  }, [router]);
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/');
+  };
 
   const handleTranscript = async (text: string) => {
     console.log('[App] Transcript received:', text);
@@ -189,6 +215,30 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-black text-white">
+      {/* Top Navigation */}
+      <div className="border-b border-slate-800">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-blue-400" />
+            <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              NaviOS
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/dashboard">
+              <Button variant="ghost" size="sm">
+                <LayoutDashboard className="w-4 h-4 mr-2" />
+                Dashboard
+              </Button>
+            </Link>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          </div>
+        </div>
+      </div>
+
       <div className="container mx-auto px-4 py-12">
         {/* Header */}
         <motion.div
@@ -196,13 +246,8 @@ export default function Home() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-12"
         >
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Sparkles className="w-10 h-10 text-blue-400" />
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              Navi
-            </h1>
-          </div>
-          <p className="text-gray-400 text-lg">Your Voice-First AI Personal Operator</p>
+          <h1 className="text-4xl font-bold text-white mb-2">Voice Assistant</h1>
+          <p className="text-gray-400 text-lg">Speak your command to get started</p>
           {sessionId && (
             <p className="text-gray-600 text-xs mt-2">Session: {sessionId.slice(0, 8)}...</p>
           )}
