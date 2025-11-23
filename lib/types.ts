@@ -3,7 +3,7 @@ export type IntentType = 'create_task' | 'send_email' | 'other';
 
 export type Priority = 'high' | 'medium' | 'low';
 
-export type ExecutionStatus = 'pending' | 'completed' | 'failed';
+export type ExecutionStatus = 'pending' | 'completed' | 'failed' | 'conversational';
 
 // Parameters for different intent types
 export interface CreateTaskParams {
@@ -54,6 +54,7 @@ export interface ExecutionResult {
   task_id?: string;
   notion_url?: string;
   message_id?: string;
+  response?: string;  // For conversational interactions
   error?: string;
 }
 

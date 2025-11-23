@@ -128,9 +128,17 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
     // First, get the database schema to find the title property name
     const database = await notion.databases.retrieve({ database_id: notionDatabaseId });
 
+    // Check if this is a full database response (not partial)
+    if (!('properties' in database)) {
+      throw new Error('Failed to retrieve database schema');
+    }
+
+    // TypeScript: Use any after runtime check since Notion SDK types are complex
+    const dbProperties = (database as any).properties as Record<string, any>;
+
     // Find the title property (every database has exactly one)
     let titlePropertyName = 'Name'; // default fallback
-    for (const [propertyName, propertyValue] of Object.entries(database.properties)) {
+    for (const [propertyName, propertyValue] of Object.entries(dbProperties)) {
       if ((propertyValue as any).type === 'title') {
         titlePropertyName = propertyName;
         break;
@@ -153,7 +161,7 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
     };
 
     // Only add optional properties if they exist in the database
-    if (dueDate && database.properties['Due Date']) {
+    if (dueDate && dbProperties['Due Date']) {
       properties['Due Date'] = {
         date: {
           start: dueDate,
@@ -161,7 +169,7 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
       };
     }
 
-    if (params.priority && database.properties['Priority']) {
+    if (params.priority && dbProperties['Priority']) {
       properties['Priority'] = {
         select: {
           name: params.priority.charAt(0).toUpperCase() + params.priority.slice(1),
