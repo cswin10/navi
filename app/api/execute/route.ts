@@ -115,6 +115,39 @@ export async function POST(request: NextRequest) {
 }
 
 /**
+ * Generate capitalization variations for a property name
+ * e.g., "due date" -> ["due date", "Due Date", "Due date", "DUE DATE"]
+ */
+function generateCapitalizations(name: string): string[] {
+  const variations = new Set<string>();
+
+  // Original
+  variations.add(name);
+
+  // All lowercase
+  variations.add(name.toLowerCase());
+
+  // Title Case (Each Word Capitalized)
+  variations.add(name.split(' ').map(word =>
+    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+  ).join(' '));
+
+  // First word capitalized only
+  const words = name.split(' ');
+  if (words.length > 0) {
+    variations.add(
+      words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase() +
+      (words.length > 1 ? ' ' + words.slice(1).join(' ').toLowerCase() : '')
+    );
+  }
+
+  // ALL CAPS
+  variations.add(name.toUpperCase());
+
+  return Array.from(variations);
+}
+
+/**
  * Create a task in Notion
  */
 async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionResult> {
@@ -150,74 +183,119 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
 
     console.log('[Notion] Creating page in database:', notionDatabaseId);
 
-    // List of common title property names to try (case-sensitive)
-    const titlePropertyNames = ['task', 'Task', 'Name', 'Title', 'Todo', 'Item', 'To-do'];
+    // Common property base names to try
+    const titleBaseNames = ['task', 'name', 'title', 'todo', 'item'];
+    const dueDateBaseNames = ['due date', 'due', 'date', 'deadline'];
+    const priorityBaseNames = ['priority level', 'priority', 'importance'];
+
+    // Generate all capitalization variations
+    const titlePropertyNames: string[] = [];
+    titleBaseNames.forEach(base => {
+      titlePropertyNames.push(...generateCapitalizations(base));
+    });
 
     let response;
     let lastError;
-    let successfulTitleProp: string | null = null;
 
-    // Try each common property name
+    // Try each title property variation
     for (const titleProp of titlePropertyNames) {
-      try {
-        console.log(`[Notion] Attempting to create page with title property: "${titleProp}"`);
+      // Try different combinations of optional field variations
+      const dueDateVariations = dueDate ? generateCapitalizations(dueDateBaseNames[0]) : [];
+      const priorityVariations = params.priority ? generateCapitalizations(priorityBaseNames[0]) : [];
 
-        const properties: any = {
-          [titleProp]: {
-            title: [
-              {
-                text: {
-                  content: params.title,
-                },
-              },
-            ],
-          },
-        };
+      // Build list of property combinations to try
+      const combinations = [{ dueDate: dueDateVariations[0], priority: priorityVariations[0] }];
 
-        // Add optional fields if they exist
-        if (dueDate) {
-          properties['due date'] = {
-            date: {
-              start: dueDate,
-            },
-          };
-        }
-
-        if (params.priority) {
-          properties['priority level'] = {
-            select: {
-              name: params.priority.charAt(0).toUpperCase() + params.priority.slice(1),
-            },
-          };
-        }
-
-        response = await notion.pages.create({
-          parent: {
-            database_id: notionDatabaseId,
-          },
-          properties,
+      // Add more variations if the first fails
+      if (dueDateVariations.length > 1 || priorityVariations.length > 1) {
+        dueDateVariations.forEach(dd => {
+          priorityVariations.forEach(pr => {
+            combinations.push({ dueDate: dd, priority: pr });
+          });
         });
-
-        successfulTitleProp = titleProp;
-        console.log(`[Notion] Success! Title property name is: "${titleProp}"`);
-        break; // Success, exit loop
-      } catch (createError: any) {
-        console.log(`[Notion] Failed with "${titleProp}":`, createError.body?.message);
-        lastError = createError;
-
-        // If it's not a property name issue, throw immediately
-        if (!createError.body?.message?.includes('does not exist')) {
-          throw createError;
-        }
-        // Otherwise, try the next property name
       }
+
+      for (const combo of combinations) {
+        try {
+          const properties: any = {
+            [titleProp]: {
+              title: [
+                {
+                  text: {
+                    content: params.title,
+                  },
+                },
+              ],
+            },
+          };
+
+          // Add optional fields
+          if (dueDate && combo.dueDate) {
+            properties[combo.dueDate] = {
+              date: {
+                start: dueDate,
+              },
+            };
+          }
+
+          if (params.priority && combo.priority) {
+            properties[combo.priority] = {
+              select: {
+                name: params.priority.charAt(0).toUpperCase() + params.priority.slice(1),
+              },
+            };
+          }
+
+          console.log(`[Notion] Trying: title="${titleProp}", due="${combo.dueDate}", priority="${combo.priority}"`);
+
+          response = await notion.pages.create({
+            parent: {
+              database_id: notionDatabaseId,
+            },
+            properties,
+          });
+
+          console.log(`[Notion] Success! Properties: title="${titleProp}", due="${combo.dueDate}", priority="${combo.priority}"`);
+          break; // Success, exit loop
+        } catch (createError: any) {
+          lastError = createError;
+
+          // If it's not a property name issue, throw immediately
+          if (!createError.body?.message?.includes('does not exist')) {
+            // Try without optional fields
+            if (dueDate || params.priority) {
+              console.log(`[Notion] Error not related to missing properties, trying with just title...`);
+              try {
+                response = await notion.pages.create({
+                  parent: {
+                    database_id: notionDatabaseId,
+                  },
+                  properties: {
+                    [titleProp]: {
+                      title: [{ text: { content: params.title } }],
+                    },
+                  },
+                });
+                console.log(`[Notion] Success with title only: "${titleProp}"`);
+                break;
+              } catch (e) {
+                throw createError; // Re-throw original error
+              }
+            } else {
+              throw createError;
+            }
+          }
+        }
+      }
+
+      if (response) break; // Exit outer loop if successful
     }
 
     // If we tried all property names and none worked
     if (!response) {
-      console.error('[Notion] All title property attempts failed');
-      throw new Error(`Could not create Notion task. Tried property names: ${titlePropertyNames.join(', ')}.
-Please check your Notion database columns and update NOTION_DATABASE_ID if needed.
+      console.error('[Notion] All property name attempts failed');
+      throw new Error(`Could not create Notion task. Tried multiple variations of common property names.
+Please verify your NOTION_DATABASE_ID and integration permissions.
 Last error: ${lastError?.body?.message || lastError?.message}`);
     }
 
