@@ -50,11 +50,11 @@ export default function Home() {
     setAppState('processing');
 
     try {
-      // Process intent with Claude
+      // Process intent with Claude (include sessionId for memory)
       const processResponse = await fetch('/api/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, sessionId }),
       });
 
       const processData = await processResponse.json();
@@ -85,8 +85,25 @@ export default function Home() {
       }));
 
       // If intent is "other" (conversational), go back to idle after response plays
-      // Otherwise, show confirmation for actionable intents
+      // AND store the conversation in Supabase for memory
       if (processData.intent.intent === 'other') {
+        // Store conversational interaction in Supabase
+        if (sessionId) {
+          try {
+            const response = await fetch('/api/store-conversation', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sessionId,
+                transcript: text,
+                intent: processData.intent,
+              }),
+            });
+            console.log('[App] Conversation stored');
+          } catch (error) {
+            console.error('[App] Failed to store conversation:', error);
+          }
+        }
         setAppState('idle');
       } else {
         setAppState('confirming');

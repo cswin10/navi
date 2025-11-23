@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { ClaudeIntentResponse, ProcessResponse } from '@/lib/types';
+import { getSessionActions } from '@/lib/supabase';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 const SYSTEM_PROMPT = `You are Navi, a voice-first AI personal operator. Your job is to understand user requests and propose specific actions.
+
+You have memory of past conversations and can remember details about the user. Use this context to provide personalized responses.
 
 Analyze the user's request and determine the intent. Respond with JSON in this exact format:
 
@@ -37,7 +40,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { text } = body;
+    const { text, sessionId } = body;
 
     if (!text) {
       console.error('[Process API] No text provided');
@@ -49,11 +52,26 @@ export async function POST(request: NextRequest) {
 
     console.log('[Process API] Processing text:', text);
 
-    // Call Claude API
+    // Fetch conversation history for context (if sessionId provided)
+    let conversationContext = '';
+    if (sessionId) {
+      const history = await getSessionActions(sessionId);
+      if (history.length > 0) {
+        conversationContext = '\n\nPrevious conversation history:\n';
+        history.slice(-5).forEach((item) => { // Last 5 interactions
+          conversationContext += `User: ${item.transcript}\n`;
+          if (item.execution_result && typeof item.execution_result === 'object' && 'response' in item.execution_result) {
+            conversationContext += `Navi: ${item.execution_result.response}\n`;
+          }
+        });
+      }
+    }
+
+    // Call Claude API with conversation context
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-5-20250929',
       max_tokens: 1024,
-      system: SYSTEM_PROMPT,
+      system: SYSTEM_PROMPT + conversationContext,
       messages: [
         {
           role: 'user',
