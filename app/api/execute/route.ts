@@ -183,123 +183,196 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
 
     console.log('[Notion] Creating page in database:', notionDatabaseId);
 
-    // Common property base names to try
+    // Step 1: Find the correct title property name by trying with just the title
     const titleBaseNames = ['task', 'name', 'title', 'todo', 'item'];
-    const dueDateBaseNames = ['due date', 'due', 'date', 'deadline'];
-    const priorityBaseNames = ['priority level', 'priority', 'importance'];
+    let titlePropertyName: string | null = null;
+    let lastTitleError;
 
-    // Generate all capitalization variations
-    const titlePropertyNames: string[] = [];
-    titleBaseNames.forEach(base => {
-      titlePropertyNames.push(...generateCapitalizations(base));
-    });
+    console.log('[Notion] Step 1: Finding title property name...');
 
-    let response;
-    let lastError;
+    for (const base of titleBaseNames) {
+      const variations = generateCapitalizations(base);
 
-    // Try each title property variation
-    for (const titleProp of titlePropertyNames) {
-      // Try different combinations of optional field variations
-      const dueDateVariations = dueDate ? generateCapitalizations(dueDateBaseNames[0]) : [];
-      const priorityVariations = params.priority ? generateCapitalizations(priorityBaseNames[0]) : [];
-
-      // Build list of property combinations to try
-      const combinations = [{ dueDate: dueDateVariations[0], priority: priorityVariations[0] }];
-
-      // Add more variations if the first fails
-      if (dueDateVariations.length > 1 || priorityVariations.length > 1) {
-        dueDateVariations.forEach(dd => {
-          priorityVariations.forEach(pr => {
-            combinations.push({ dueDate: dd, priority: pr });
-          });
-        });
-      }
-
-      for (const combo of combinations) {
+      for (const titleProp of variations) {
         try {
-          const properties: any = {
-            [titleProp]: {
-              title: [
-                {
-                  text: {
-                    content: params.title,
-                  },
-                },
-              ],
-            },
-          };
+          console.log(`[Notion] Trying title property: "${titleProp}"`);
 
-          // Add optional fields
-          if (dueDate && combo.dueDate) {
-            properties[combo.dueDate] = {
-              date: {
-                start: dueDate,
-              },
-            };
-          }
-
-          if (params.priority && combo.priority) {
-            properties[combo.priority] = {
-              select: {
-                name: params.priority.charAt(0).toUpperCase() + params.priority.slice(1),
-              },
-            };
-          }
-
-          console.log(`[Notion] Trying: title="${titleProp}", due="${combo.dueDate}", priority="${combo.priority}"`);
-
-          response = await notion.pages.create({
+          const testResponse = await notion.pages.create({
             parent: {
               database_id: notionDatabaseId,
             },
-            properties,
+            properties: {
+              [titleProp]: {
+                title: [{ text: { content: params.title } }],
+              },
+            },
           });
 
-          console.log(`[Notion] Success! Properties: title="${titleProp}", due="${combo.dueDate}", priority="${combo.priority}"`);
-          break; // Success, exit loop
-        } catch (createError: any) {
-          lastError = createError;
+          titlePropertyName = titleProp;
+          console.log(`[Notion] ✓ Found working title property: "${titleProp}"`);
 
-          // If it's not a property name issue, throw immediately
-          if (!createError.body?.message?.includes('does not exist')) {
-            // Try without optional fields
-            if (dueDate || params.priority) {
-              console.log(`[Notion] Error not related to missing properties, trying with just title...`);
-              try {
-                response = await notion.pages.create({
-                  parent: {
-                    database_id: notionDatabaseId,
-                  },
-                  properties: {
-                    [titleProp]: {
-                      title: [{ text: { content: params.title } }],
-                    },
-                  },
-                });
-                console.log(`[Notion] Success with title only: "${titleProp}"`);
-                break;
-              } catch (e) {
-                throw createError; // Re-throw original error
-              }
-            } else {
-              throw createError;
+          // If we don't need optional fields, we're done!
+          if (!dueDate && !params.priority) {
+            console.log('[Notion] Task created (title only):', testResponse.id);
+            const pageId = testResponse.id.replace(/-/g, '');
+            return {
+              success: true,
+              task_id: testResponse.id,
+              notion_url: `https://www.notion.so/${pageId}`,
+            };
+          }
+
+          // Delete the test page since we'll create a proper one with all fields
+          try {
+            await notion.pages.update({
+              page_id: testResponse.id,
+              archived: true,
+            });
+          } catch (e) {
+            // Ignore deletion errors
+          }
+
+          break; // Found it, exit variations loop
+        } catch (error: any) {
+          lastTitleError = error;
+          if (!error.body?.message?.includes('does not exist')) {
+            // Not a property name issue, throw it
+            throw error;
+          }
+        }
+      }
+
+      if (titlePropertyName) break; // Found it, exit base names loop
+    }
+
+    if (!titlePropertyName) {
+      throw new Error(`Could not find title property. Tried: ${titleBaseNames.join(', ')} with various capitalizations. Last error: ${lastTitleError?.body?.message || lastTitleError?.message}`);
+    }
+
+    // Step 2: Now create the final page with optional fields
+    console.log('[Notion] Step 2: Creating page with optional fields...');
+
+    const properties: any = {
+      [titlePropertyName]: {
+        title: [{ text: { content: params.title } }],
+      },
+    };
+
+    // Try to add due date
+    if (dueDate) {
+      const dueDateBaseNames = ['due date', 'due', 'date', 'deadline'];
+      let dueDateAdded = false;
+
+      for (const base of dueDateBaseNames) {
+        if (dueDateAdded) break;
+        const variations = generateCapitalizations(base);
+
+        for (const dueDateProp of variations) {
+          properties[dueDateProp] = {
+            date: { start: dueDate },
+          };
+
+          // Test if this property works
+          try {
+            console.log(`[Notion] Trying due date property: "${dueDateProp}"`);
+            await notion.pages.create({
+              parent: { database_id: notionDatabaseId },
+              properties: {
+                [titlePropertyName]: {
+                  title: [{ text: { content: '_test_' } }],
+                },
+                [dueDateProp]: {
+                  date: { start: dueDate },
+                },
+              },
+            }).then(async (testPage) => {
+              // Clean up test page
+              await notion.pages.update({ page_id: testPage.id, archived: true }).catch(() => {});
+            });
+
+            console.log(`[Notion] ✓ Found due date property: "${dueDateProp}"`);
+            dueDateAdded = true;
+            break;
+          } catch (e: any) {
+            delete properties[dueDateProp]; // Remove if it didn't work
+            if (!e.body?.message?.includes('does not exist')) {
+              console.log(`[Notion] Due date property "${dueDateProp}" exists but errored, skipping optional fields`);
+              break;
             }
           }
         }
       }
 
-      if (response) break; // Exit outer loop if successful
+      if (!dueDateAdded) {
+        console.log('[Notion] Could not find due date property, proceeding without it');
+      }
     }
 
-    // If we tried all property names and none worked
-    if (!response) {
-      console.error('[Notion] All property name attempts failed');
-      throw new Error(`Could not create Notion task. Tried multiple variations of common property names.
-Please verify your NOTION_DATABASE_ID and integration permissions.
-Last error: ${lastError?.body?.message || lastError?.message}`);
+    // Try to add priority
+    if (params.priority) {
+      const priorityBaseNames = ['priority level', 'priority', 'importance'];
+      let priorityAdded = false;
+
+      for (const base of priorityBaseNames) {
+        if (priorityAdded) break;
+        const variations = generateCapitalizations(base);
+
+        for (const priorityProp of variations) {
+          properties[priorityProp] = {
+            select: {
+              name: params.priority.charAt(0).toUpperCase() + params.priority.slice(1),
+            },
+          };
+
+          // Test if this property works
+          try {
+            console.log(`[Notion] Trying priority property: "${priorityProp}"`);
+            await notion.pages.create({
+              parent: { database_id: notionDatabaseId },
+              properties: {
+                [titlePropertyName]: {
+                  title: [{ text: { content: '_test_' } }],
+                },
+                [priorityProp]: {
+                  select: {
+                    name: params.priority.charAt(0).toUpperCase() + params.priority.slice(1),
+                  },
+                },
+              },
+            }).then(async (testPage) => {
+              // Clean up test page
+              await notion.pages.update({ page_id: testPage.id, archived: true }).catch(() => {});
+            });
+
+            console.log(`[Notion] ✓ Found priority property: "${priorityProp}"`);
+            priorityAdded = true;
+            break;
+          } catch (e: any) {
+            delete properties[priorityProp]; // Remove if it didn't work
+            if (!e.body?.message?.includes('does not exist')) {
+              console.log(`[Notion] Priority property "${priorityProp}" exists but errored, skipping`);
+              break;
+            }
+          }
+        }
+      }
+
+      if (!priorityAdded) {
+        console.log('[Notion] Could not find priority property, proceeding without it');
+      }
     }
 
-    console.log('[Notion] Task created:', response.id);
+    // Step 3: Create the final page with all working properties
+    console.log('[Notion] Step 3: Creating final page with properties:', Object.keys(properties).join(', '));
+
+    const response = await notion.pages.create({
+      parent: {
+        database_id: notionDatabaseId,
+      },
+      properties,
+    });
+
+    console.log('[Notion] Task created successfully:', response.id);
 
     // Construct Notion URL from page ID
     const pageId = response.id.replace(/-/g, '');
