@@ -150,59 +150,19 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
 
     console.log('[Notion] Creating page in database:', notionDatabaseId);
 
-    // Try common property names for Notion databases
-    // Since we can't retrieve schema (inline DB permission issue), we'll try standard names
-    const properties: any = {
-      // Try 'Name' first (most common title property)
-      'Name': {
-        title: [
-          {
-            text: {
-              content: params.title,
-            },
-          },
-        ],
-      },
-    };
-
-    // Add due date if provided
-    if (dueDate) {
-      properties['Due Date'] = {
-        date: {
-          start: dueDate,
-        },
-      };
-    }
-
-    // Add priority if provided
-    if (params.priority) {
-      properties['Priority'] = {
-        select: {
-          name: params.priority.charAt(0).toUpperCase() + params.priority.slice(1),
-        },
-      };
-    }
-
-    console.log('[Notion] Creating page with properties:', JSON.stringify(properties, null, 2));
+    // List of common title property names to try
+    const titlePropertyNames = ['Name', 'Title', 'Task', 'Todo', 'Item', 'To-do'];
 
     let response;
-    try {
-      response = await notion.pages.create({
-        parent: {
-          database_id: notionDatabaseId,
-        },
-        properties,
-      });
-    } catch (createError: any) {
-      console.error('[Notion] Failed to create page:', createError);
-      console.error('[Notion] Error body:', JSON.stringify(createError.body, null, 2));
+    let lastError;
 
-      // If property name is wrong, try alternative common names
-      if (createError.body?.message?.includes('does not exist')) {
-        console.log('[Notion] Retrying with alternative property name "Title"');
+    // Try each common property name
+    for (const titleProp of titlePropertyNames) {
+      try {
+        console.log(`[Notion] Attempting to create page with title property: "${titleProp}"`);
 
-        const altProperties: any = {
-          'Title': {
+        const properties: any = {
+          [titleProp]: {
             title: [
               {
                 text: {
@@ -213,16 +173,33 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
           },
         };
 
-        // Try again without optional properties
         response = await notion.pages.create({
           parent: {
             database_id: notionDatabaseId,
           },
-          properties: altProperties,
+          properties,
         });
-      } else {
-        throw createError;
+
+        console.log(`[Notion] Success! Title property name is: "${titleProp}"`);
+        break; // Success, exit loop
+      } catch (createError: any) {
+        console.log(`[Notion] Failed with "${titleProp}":`, createError.body?.message);
+        lastError = createError;
+
+        // If it's not a property name issue, throw immediately
+        if (!createError.body?.message?.includes('does not exist')) {
+          throw createError;
+        }
+        // Otherwise, try the next property name
       }
+    }
+
+    // If we tried all property names and none worked
+    if (!response) {
+      console.error('[Notion] All title property attempts failed');
+      throw new Error(`Could not create Notion task. Tried property names: ${titlePropertyNames.join(', ')}.
+Please check your Notion database columns and update NOTION_DATABASE_ID if needed.
+Last error: ${lastError?.body?.message || lastError?.message}`);
     }
 
     console.log('[Notion] Task created:', response.id);
