@@ -150,11 +150,12 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
 
     console.log('[Notion] Creating page in database:', notionDatabaseId);
 
-    // List of common title property names to try
-    const titlePropertyNames = ['Name', 'Title', 'Task', 'Todo', 'Item', 'To-do'];
+    // List of common title property names to try (case-sensitive)
+    const titlePropertyNames = ['task', 'Task', 'Name', 'Title', 'Todo', 'Item', 'To-do'];
 
     let response;
     let lastError;
+    let successfulTitleProp: string | null = null;
 
     // Try each common property name
     for (const titleProp of titlePropertyNames) {
@@ -173,6 +174,23 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
           },
         };
 
+        // Add optional fields if they exist
+        if (dueDate) {
+          properties['due date'] = {
+            date: {
+              start: dueDate,
+            },
+          };
+        }
+
+        if (params.priority) {
+          properties['priority level'] = {
+            select: {
+              name: params.priority.charAt(0).toUpperCase() + params.priority.slice(1),
+            },
+          };
+        }
+
         response = await notion.pages.create({
           parent: {
             database_id: notionDatabaseId,
@@ -180,6 +198,7 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
           properties,
         });
 
+        successfulTitleProp = titleProp;
         console.log(`[Notion] Success! Title property name is: "${titleProp}"`);
         break; // Success, exit loop
       } catch (createError: any) {
