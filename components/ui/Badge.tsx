@@ -2,7 +2,7 @@ import { HTMLAttributes, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
-  variant?: 'default' | 'high' | 'medium' | 'low' | 'todo' | 'in_progress' | 'done'
+  variant?: 'default' | 'high' | 'medium' | 'low' | 'todo' | 'in_progress' | 'done' | 'success' | 'secondary'
   children: ReactNode
 }
 
@@ -15,6 +15,8 @@ export function Badge({ variant = 'default', children, className, ...props }: Ba
     todo: 'bg-slate-600/20 text-slate-400 border border-slate-600/30',
     in_progress: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
     done: 'bg-green-500/20 text-green-400 border border-green-500/30',
+    success: 'bg-green-500/20 text-green-400 border border-green-500/30',
+    secondary: 'bg-slate-600/20 text-slate-400 border border-slate-600/30',
   }
 
   return (
