@@ -109,32 +109,18 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
     }
   }, []);
 
-  const handleMouseDown = () => {
-    startRecording();
-  };
-
-  const handleMouseUp = () => {
-    stopRecording();
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault();
-    startRecording();
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault();
-    stopRecording();
+  const handleClick = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
   };
 
   return (
     <div className="flex flex-col items-center gap-4">
       <motion.button
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
+        onClick={handleClick}
         disabled={disabled || isProcessing}
         className={`
           relative w-32 h-32 rounded-full
@@ -176,7 +162,7 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
             animate={{ opacity: 1 }}
             className="text-red-400 font-medium"
           >
-            Recording... Release to stop
+            Recording... Click to stop or say "Thank you Navi"
           </motion.p>
         )}
         {isProcessing && (
@@ -189,7 +175,7 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
           </motion.p>
         )}
         {!isRecording && !isProcessing && (
-          <p className="text-gray-400">Press and hold to speak</p>
+          <p className="text-gray-400">Click to start speaking</p>
         )}
       </div>
     </div>
