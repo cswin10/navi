@@ -19,6 +19,7 @@ export interface Database {
           email: string | null
           preferences: Json
           context_memory: Json
+          knowledge_base: string
           created_at: string
           updated_at: string
         }
@@ -28,6 +29,7 @@ export interface Database {
           email?: string | null
           preferences?: Json
           context_memory?: Json
+          knowledge_base?: string
           created_at?: string
           updated_at?: string
         }
@@ -37,6 +39,7 @@ export interface Database {
           email?: string | null
           preferences?: Json
           context_memory?: Json
+          knowledge_base?: string
           created_at?: string
           updated_at?: string
         }

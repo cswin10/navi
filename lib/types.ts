@@ -1,5 +1,5 @@
 // Core intent types
-export type IntentType = 'create_task' | 'send_email' | 'other';
+export type IntentType = 'create_task' | 'send_email' | 'remember' | 'other';
 
 export type Priority = 'high' | 'medium' | 'low';
 
@@ -18,7 +18,12 @@ export interface SendEmailParams {
   body: string;
 }
 
-export type IntentParams = CreateTaskParams | SendEmailParams | Record<string, unknown>;
+export interface RememberParams {
+  section: string;
+  content: string;
+}
+
+export type IntentParams = CreateTaskParams | SendEmailParams | RememberParams | Record<string, unknown>;
 
 // Claude API Response
 export interface ClaudeIntentResponse {

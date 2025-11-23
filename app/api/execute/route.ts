@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, SendEmailParams } from '@/lib/types';
+import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, SendEmailParams, RememberParams } from '@/lib/types';
 import { getCurrentUser, createClient } from '@/lib/auth';
 import { decrypt } from '@/lib/encryption';
 import type { Database } from '@/lib/database.types';
@@ -64,6 +64,10 @@ export async function POST(request: NextRequest) {
 
       case 'send_email':
         result = await executeSendEmail(user.id, intent.parameters as SendEmailParams);
+        break;
+
+      case 'remember':
+        result = await executeRemember(user.id, intent.parameters as RememberParams);
         break;
 
       default:
@@ -192,6 +196,58 @@ async function executeSendEmail(userId: string, params: SendEmailParams): Promis
     return {
       success: false,
       error: error.message || 'Failed to send email',
+    };
+  }
+}
+
+/**
+ * Add information to user's knowledge base
+ */
+async function executeRemember(userId: string, params: RememberParams): Promise<ExecutionResult> {
+  try {
+    console.log('[Execute] Adding to knowledge base:', params);
+
+    const supabase = await createClient();
+
+    // Get current knowledge base
+    const { data: profile } = await (supabase
+      .from('user_profiles') as any)
+      .select('knowledge_base')
+      .eq('id', userId)
+      .single();
+
+    const currentKnowledgeBase = profile?.knowledge_base || '';
+
+    // Format the new entry
+    const timestamp = new Date().toLocaleDateString('en-GB');
+    const newEntry = `\n\n## ${params.section}\n[Added: ${timestamp}]\n${params.content}`;
+
+    // Append to knowledge base
+    const updatedKnowledgeBase = currentKnowledgeBase + newEntry;
+
+    const { error } = await (supabase
+      .from('user_profiles') as any)
+      .update({
+        knowledge_base: updatedKnowledgeBase,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId);
+
+    if (error) {
+      throw new Error(`Failed to update knowledge base: ${error.message}`);
+    }
+
+    console.log('[Execute] Knowledge base updated');
+
+    return {
+      success: true,
+      response: `Got it! I've added that to your knowledge base under "${params.section}".`,
+    };
+  } catch (error: any) {
+    console.error('[Execute] Remember failed:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to save to knowledge base',
     };
   }
 }

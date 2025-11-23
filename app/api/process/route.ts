@@ -19,10 +19,14 @@ async function getSessionActions(sessionId: string) {
   return data || [];
 }
 
-function buildSystemPrompt(userName?: string, contextMemory?: any) {
+function buildSystemPrompt(userName?: string, contextMemory?: any, knowledgeBase?: string) {
   const today = new Date();
   const contextString = contextMemory && typeof contextMemory === 'object' && Object.keys(contextMemory).length > 0
-    ? `\n\nContext about ${userName || 'this user'}:\n${Object.entries(contextMemory).map(([key, value]) => `- ${key}: ${value}`).join('\n')}`
+    ? `\n\nQuick Context:\n${Object.entries(contextMemory).map(([key, value]) => `- ${key}: ${value}`).join('\n')}`
+    : '';
+
+  const knowledgeBaseString = knowledgeBase && knowledgeBase.trim()
+    ? `\n\n${userName ? `${userName}'s` : 'User'} Knowledge Base:\n${knowledgeBase}`
     : '';
 
   return `You are Navi, ${userName ? `${userName}'s` : 'a'} concise voice-first AI personal operator.
@@ -30,7 +34,7 @@ function buildSystemPrompt(userName?: string, contextMemory?: any) {
 Today's date: ${today.toLocaleDateString('en-GB')} (UK format: DD/MM/YYYY)
 Current ISO date: ${today.toISOString().split('T')[0]}
 
-IMPORTANT: User is in UK timezone. When they say "tomorrow", calculate from today's date above.${contextString}
+IMPORTANT: User is in UK timezone. When they say "tomorrow", calculate from today's date above.${contextString}${knowledgeBaseString}
 
 You have memory of past conversations. Use context to be helpful and personalized.
 
@@ -41,10 +45,11 @@ IMPORTANT RULES:
 - Don't explain what you can do unless asked
 - Be direct and conversational
 - For dates: Use ISO format (YYYY-MM-DD) in due_date field
+- When user says "remember that...", "note that...", "keep in mind...", use intent "remember"
 
 Respond with JSON:
 {
-  "intent": "create_task" | "send_email" | "other",
+  "intent": "create_task" | "send_email" | "remember" | "other",
   "response": "Brief response",
   "parameters": {
     // For create_task (ALL fields required):
@@ -56,12 +61,17 @@ Respond with JSON:
     "to": "email@example.com",
     "subject": "string",
     "body": "string"
+
+    // For remember:
+    "section": "string (e.g. 'Important Contacts', 'Preferences', 'Current Projects')",
+    "content": "string (what to remember)"
   }
 }
 
 Examples:
 - User: "create a task" → intent: "other", response: "What should the task be?"
 - User: "task about demo tomorrow" → intent: "create_task", response: "I'll create a task 'demo' due tomorrow. Proceed?"
+- User: "remember that John's email is john@company.com" → intent: "remember", response: "Got it! I'll remember John's email."
 - User: "hi" → intent: "other", response: "Hey! What do you need?"`;
 }
 
@@ -90,11 +100,11 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const { data: profile } = await (supabase
       .from('user_profiles') as any)
-      .select('name, context_memory')
+      .select('name, context_memory, knowledge_base')
       .eq('id', user.id)
       .single();
 
-    const systemPrompt = buildSystemPrompt(profile?.name, profile?.context_memory);
+    const systemPrompt = buildSystemPrompt(profile?.name, profile?.context_memory, profile?.knowledge_base);
 
     // Fetch conversation history for context (if sessionId provided)
     let conversationContext = '';
