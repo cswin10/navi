@@ -107,10 +107,17 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
   try {
     console.log('[Notion] Creating task:', params);
 
+    const notionApiKey = process.env.NOTION_API_KEY;
     const notionDatabaseId = process.env.NOTION_DATABASE_ID;
+
+    if (!notionApiKey) {
+      throw new Error('NOTION_API_KEY not configured');
+    }
     if (!notionDatabaseId) {
       throw new Error('NOTION_DATABASE_ID not configured');
     }
+
+    console.log('[Notion] Database ID:', notionDatabaseId.substring(0, 8) + '...');
 
     // Parse due date
     let dueDate = null;
@@ -126,15 +133,28 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
     const notion = getNotionClient();
 
     // First, get the database schema to find the title property name
-    const database = await notion.databases.retrieve({ database_id: notionDatabaseId });
+    console.log('[Notion] Retrieving database schema for:', notionDatabaseId);
+
+    let database;
+    try {
+      database = await notion.databases.retrieve({ database_id: notionDatabaseId });
+    } catch (notionError: any) {
+      console.error('[Notion] API Error:', notionError);
+      throw new Error(`Notion API error: ${notionError.message || 'Failed to retrieve database'}. Check that your Notion integration has access to this database.`);
+    }
+
+    console.log('[Notion] Database response object type:', database.object);
+    console.log('[Notion] Has properties field:', 'properties' in database);
 
     // Check if this is a full database response (not partial)
     if (!('properties' in database)) {
-      throw new Error('Failed to retrieve database schema');
+      console.error('[Notion] Database response:', JSON.stringify(database, null, 2));
+      throw new Error(`Failed to retrieve database schema. Database ID: ${notionDatabaseId}. The database was found but properties are not accessible. Make sure the Notion integration has full access to this database.`);
     }
 
     // TypeScript: Use any after runtime check since Notion SDK types are complex
     const dbProperties = (database as any).properties as Record<string, any>;
+    console.log('[Notion] Available properties:', Object.keys(dbProperties).join(', '));
 
     // Find the title property (every database has exactly one)
     let titlePropertyName = 'Name'; // default fallback
