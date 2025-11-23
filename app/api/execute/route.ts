@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     console.log('[Execute API] Webhook response:', result);
 
     // Update action status
-    const proofLink = result.notion_url || null;
+    const proofLink = result.notion_url || undefined;
     await updateActionStatus(action.id, 'completed', result, proofLink);
 
     console.log('[Execute API] Execution completed successfully');
