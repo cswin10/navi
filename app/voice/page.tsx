@@ -70,9 +70,42 @@ export default function VoicePage() {
     router.push('/');
   };
 
+  const cleanStopPhrases = (text: string): string => {
+    const stopPhrases = [
+      'thank you navi',
+      'thanks navi',
+      'that\'s all',
+      'that is all',
+      'stop',
+      'done',
+      'finish',
+    ];
+
+    let cleaned = text.toLowerCase().trim();
+
+    // Check if any stop phrase is at the end
+    for (const phrase of stopPhrases) {
+      if (cleaned.endsWith(phrase)) {
+        // Remove the stop phrase and trim again
+        cleaned = cleaned.slice(0, -phrase.length).trim();
+        // Remove trailing punctuation
+        cleaned = cleaned.replace(/[.,!?]+$/, '').trim();
+        console.log('[App] Removed stop phrase:', phrase);
+        break;
+      }
+    }
+
+    return cleaned;
+  };
+
   const handleTranscript = async (text: string) => {
     console.log('[App] Transcript received:', text);
-    setActionState((prev) => ({ ...prev, transcript: text }));
+
+    // Clean stop phrases from the end of the transcript
+    const cleanedText = cleanStopPhrases(text);
+    console.log('[App] Cleaned transcript:', cleanedText);
+
+    setActionState((prev) => ({ ...prev, transcript: cleanedText }));
     setAppState('processing');
 
     try {
@@ -80,7 +113,7 @@ export default function VoicePage() {
       const processResponse = await fetch('/api/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, sessionId }),
+        body: JSON.stringify({ text: cleanedText, sessionId }),
       });
 
       const processData = await processResponse.json();
@@ -121,7 +154,7 @@ export default function VoicePage() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 sessionId,
-                transcript: text,
+                transcript: cleanedText,
                 intent: processData.intent,
               }),
             });

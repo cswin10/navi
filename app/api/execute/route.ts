@@ -127,7 +127,7 @@ async function executeCreateTask(userId: string, params: CreateTaskParams): Prom
 
     return {
       success: true,
-      task_id: task.id,
+      response: `Task created: ${params.title}`,
     };
   } catch (error: any) {
     console.error('[Execute] Task creation failed:', error);
@@ -185,7 +185,7 @@ async function executeSendEmail(userId: string, params: SendEmailParams): Promis
 
     return {
       success: true,
-      message_id: info.messageId,
+      response: `Email sent successfully to ${params.to}`,
     };
   } catch (error: any) {
     console.error('[Execute] Email send failed:', error);
