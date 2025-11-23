@@ -124,38 +124,56 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
 
     // Create page in Notion database
     const notion = getNotionClient();
+
+    // First, get the database schema to find the title property name
+    const database = await notion.databases.retrieve({ database_id: notionDatabaseId });
+
+    // Find the title property (every database has exactly one)
+    let titlePropertyName = 'Name'; // default fallback
+    for (const [propertyName, propertyValue] of Object.entries(database.properties)) {
+      if ((propertyValue as any).type === 'title') {
+        titlePropertyName = propertyName;
+        break;
+      }
+    }
+
+    console.log('[Notion] Using title property:', titlePropertyName);
+
+    // Build properties object dynamically
+    const properties: any = {
+      [titlePropertyName]: {
+        title: [
+          {
+            text: {
+              content: params.title,
+            },
+          },
+        ],
+      },
+    };
+
+    // Only add optional properties if they exist in the database
+    if (dueDate && database.properties['Due Date']) {
+      properties['Due Date'] = {
+        date: {
+          start: dueDate,
+        },
+      };
+    }
+
+    if (params.priority && database.properties['Priority']) {
+      properties['Priority'] = {
+        select: {
+          name: params.priority.charAt(0).toUpperCase() + params.priority.slice(1),
+        },
+      };
+    }
+
     const response = await notion.pages.create({
       parent: {
         database_id: notionDatabaseId,
       },
-      properties: {
-        // Title property (usually named "Name" or "Title")
-        Name: {
-          title: [
-            {
-              text: {
-                content: params.title,
-              },
-            },
-          ],
-        },
-        // Due date property (if exists)
-        ...(dueDate && {
-          'Due Date': {
-            date: {
-              start: dueDate,
-            },
-          },
-        }),
-        // Priority property (if exists)
-        ...(params.priority && {
-          Priority: {
-            select: {
-              name: params.priority.charAt(0).toUpperCase() + params.priority.slice(1),
-            },
-          },
-        }),
-      },
+      properties,
     });
 
     console.log('[Notion] Task created:', response.id);
