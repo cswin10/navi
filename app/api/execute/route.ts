@@ -160,10 +160,14 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
 
     console.log('[Notion] Task created:', response.id);
 
+    // Construct Notion URL from page ID
+    const pageId = response.id.replace(/-/g, '');
+    const notionUrl = `https://www.notion.so/${pageId}`;
+
     return {
       success: true,
       task_id: response.id,
-      notion_url: response.url,
+      notion_url: notionUrl,
     };
   } catch (error: any) {
     console.error('[Notion] Error creating task:', error);

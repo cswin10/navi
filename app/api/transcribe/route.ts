@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { TranscriptionResponse } from '@/lib/types';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialize OpenAI client
+function getOpenAIClient() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 export async function POST(request: NextRequest) {
   console.log('[Transcribe API] Starting transcription request...');
@@ -37,6 +40,7 @@ export async function POST(request: NextRequest) {
     console.log('[Transcribe API] Sending to Whisper API...');
 
     // Call Whisper API
+    const openai = getOpenAIClient();
     const transcription = await openai.audio.transcriptions.create({
       file: file,
       model: 'whisper-1',
