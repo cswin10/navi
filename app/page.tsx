@@ -1,5 +1,6 @@
 'use client';
 
+// Navi V1 MVP - Voice-first AI Personal Operator
 import { useState, useEffect } from 'react';
 import VoiceInput from '@/components/VoiceInput';
 import TranscriptDisplay from '@/components/TranscriptDisplay';
