@@ -1,5 +1,6 @@
 'use client';
 
+// Navi V1 MVP - Voice-first AI Personal Operator
 import { useState, useEffect } from 'react';
 import VoiceInput from '@/components/VoiceInput';
 import TranscriptDisplay from '@/components/TranscriptDisplay';
@@ -83,7 +84,13 @@ export default function Home() {
         audioUrl: speakData.audioUrl || null,
       }));
 
-      setAppState('confirming');
+      // If intent is "other" (conversational), go back to idle after response plays
+      // Otherwise, show confirmation for actionable intents
+      if (processData.intent.intent === 'other') {
+        setAppState('idle');
+      } else {
+        setAppState('confirming');
+      }
     } catch (error: any) {
       console.error('[App] Error processing:', error);
       setActionState((prev) => ({
@@ -214,6 +221,32 @@ export default function Home() {
           {/* Transcript Display */}
           {actionState.transcript && (
             <TranscriptDisplay text={actionState.transcript} />
+          )}
+
+          {/* Conversational Response (for "other" intents) */}
+          {appState === 'idle' && actionState.intent && actionState.intent.intent === 'other' && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-2xl mx-auto"
+            >
+              <div className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 backdrop-blur-sm rounded-lg p-6 border border-purple-700/50">
+                <div className="mb-4">
+                  <p className="text-white text-lg leading-relaxed">{actionState.intent.response}</p>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  <p>Ready for your next request...</p>
+                </div>
+                {actionState.audioUrl && (
+                  <audio
+                    src={actionState.audioUrl}
+                    autoPlay
+                    className="hidden"
+                  />
+                )}
+              </div>
+            </motion.div>
           )}
 
           {/* Confirmation Panel */}

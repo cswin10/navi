@@ -22,8 +22,26 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
       console.log('[VoiceInput] Starting recording...');
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Try to use the most compatible audio format
+      let mimeType = 'audio/webm';
+      const supportedTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+        'audio/mp4',
+      ];
+
+      for (const type of supportedTypes) {
+        if (MediaRecorder.isTypeSupported(type)) {
+          mimeType = type;
+          console.log('[VoiceInput] Using mime type:', mimeType);
+          break;
+        }
+      }
+
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm',
+        mimeType,
       });
 
       chunksRef.current = [];
