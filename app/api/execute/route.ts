@@ -156,16 +156,26 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
       database = await notion.databases.retrieve({ database_id: notionDatabaseId });
     } catch (notionError: any) {
       console.error('[Notion] API Error:', notionError);
+      console.error('[Notion] Error code:', notionError.code);
+      console.error('[Notion] Error body:', JSON.stringify(notionError.body, null, 2));
       throw new Error(`Notion API error: ${notionError.message || 'Failed to retrieve database'}. Check that your Notion integration has access to this database.`);
     }
 
     console.log('[Notion] Database response object type:', database.object);
+    console.log('[Notion] Database response keys:', Object.keys(database).join(', '));
     console.log('[Notion] Has properties field:', 'properties' in database);
+    console.log('[Notion] Full database response:', JSON.stringify(database, null, 2));
 
     // Check if this is a full database response (not partial)
     if (!('properties' in database)) {
-      console.error('[Notion] Database response:', JSON.stringify(database, null, 2));
-      throw new Error(`Failed to retrieve database schema. Database ID: ${notionDatabaseId}. The database was found but properties are not accessible. Make sure the Notion integration has full access to this database.`);
+      throw new Error(`Failed to retrieve database schema. Database ID: ${notionDatabaseId}. The database was found but properties are not accessible.
+
+Possible issues:
+1. Notion integration not connected to this specific database (go to the database page → ... menu → Connections → add your integration)
+2. Integration doesn't have 'Read content' capability (check https://www.notion.so/my-integrations)
+3. Wrong database ID (verify in Vercel env vars)
+
+Response received: ${JSON.stringify(database)}`);
     }
 
     // TypeScript: Use any after runtime check since Notion SDK types are complex
