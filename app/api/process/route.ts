@@ -1,20 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { ClaudeIntentResponse, ProcessResponse } from '@/lib/types';
-import { getSessionActions } from '@/lib/supabase';
+import { getCurrentUser } from '@/lib/auth';
+import { createClient } from '@/lib/auth';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const SYSTEM_PROMPT = `You are Navi, a concise voice-first AI personal operator.
+function buildSystemPrompt(userName?: string, contextMemory?: any) {
+  const today = new Date();
+  const contextString = contextMemory && typeof contextMemory === 'object' && Object.keys(contextMemory).length > 0
+    ? `\n\nContext about ${userName || 'this user'}:\n${Object.entries(contextMemory).map(([key, value]) => `- ${key}: ${value}`).join('\n')}`
+    : '';
 
-Today's date: ${new Date().toLocaleDateString('en-GB')} (UK format: DD/MM/YYYY)
-Current ISO date: ${new Date().toISOString().split('T')[0]}
+  return `You are Navi, ${userName ? `${userName}'s` : 'a'} concise voice-first AI personal operator.
 
-IMPORTANT: User is in UK timezone. When they say "tomorrow", calculate from today's date above.
+Today's date: ${today.toLocaleDateString('en-GB')} (UK format: DD/MM/YYYY)
+Current ISO date: ${today.toISOString().split('T')[0]}
 
-You have memory of past conversations. Use context to be helpful.
+IMPORTANT: User is in UK timezone. When they say "tomorrow", calculate from today's date above.${contextString}
+
+You have memory of past conversations. Use context to be helpful and personalized.
 
 IMPORTANT RULES:
 - Keep responses SHORT (1-2 sentences max)
@@ -45,11 +52,16 @@ Examples:
 - User: "create a task" → intent: "other", response: "What should the task be?"
 - User: "task about demo tomorrow" → intent: "create_task", response: "I'll create a task 'demo' due tomorrow. Proceed?"
 - User: "hi" → intent: "other", response: "Hey! What do you need?"`;
+}
 
 export async function POST(request: NextRequest) {
   console.log('[Process API] Starting intent parsing...');
 
   try {
+    // Verify authentication
+    const user = await getCurrentUser();
+    console.log('[Process API] Authenticated user:', user.id);
+
     const body = await request.json();
     const { text, sessionId } = body;
 
@@ -62,6 +74,16 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[Process API] Processing text:', text);
+
+    // Get user profile for personalization
+    const supabase = await createClient();
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('name, context_memory')
+      .eq('id', user.id)
+      .single();
+
+    const systemPrompt = buildSystemPrompt(profile?.name, profile?.context_memory);
 
     // Fetch conversation history for context (if sessionId provided)
     let conversationContext = '';
@@ -82,7 +104,7 @@ export async function POST(request: NextRequest) {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-5-20250929',
       max_tokens: 1024,
-      system: SYSTEM_PROMPT + conversationContext,
+      system: systemPrompt + conversationContext,
       messages: [
         {
           role: 'user',

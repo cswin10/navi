@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TTSResponse } from '@/lib/types';
+import { getCurrentUser } from '@/lib/auth';
 
 // ElevenLabs API configuration
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
@@ -10,6 +11,10 @@ export async function POST(request: NextRequest) {
   console.log('[Speak API] Starting TTS request...');
 
   try {
+    // Verify authentication
+    const user = await getCurrentUser();
+    console.log('[Speak API] Authenticated user:', user.id);
+
     const body = await request.json();
     const { text } = body;
 
