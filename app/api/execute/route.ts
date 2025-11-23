@@ -11,6 +11,20 @@ function getNotionClient() {
   });
 }
 
+// Format Notion ID to UUID format (with hyphens)
+function formatNotionId(id: string): string {
+  // Remove any existing hyphens
+  const clean = id.replace(/-/g, '');
+
+  // If already 32 characters, format as UUID: 8-4-4-4-12
+  if (clean.length === 32) {
+    return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`;
+  }
+
+  // Otherwise return as-is
+  return id;
+}
+
 // Lazy initialize Gmail transporter
 function getGmailTransporter() {
   return nodemailer.createTransport({
@@ -108,16 +122,18 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
     console.log('[Notion] Creating task:', params);
 
     const notionApiKey = process.env.NOTION_API_KEY;
-    const notionDatabaseId = process.env.NOTION_DATABASE_ID;
+    const notionDatabaseIdRaw = process.env.NOTION_DATABASE_ID;
 
     if (!notionApiKey) {
       throw new Error('NOTION_API_KEY not configured');
     }
-    if (!notionDatabaseId) {
+    if (!notionDatabaseIdRaw) {
       throw new Error('NOTION_DATABASE_ID not configured');
     }
 
-    console.log('[Notion] Database ID:', notionDatabaseId.substring(0, 8) + '...');
+    // Format database ID to UUID format with hyphens
+    const notionDatabaseId = formatNotionId(notionDatabaseIdRaw);
+    console.log('[Notion] Database ID (formatted):', notionDatabaseId);
 
     // Parse due date
     let dueDate = null;
