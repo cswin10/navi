@@ -4,19 +4,23 @@ import nodemailer from 'nodemailer';
 import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, SendEmailParams } from '@/lib/types';
 import { createAction, updateActionStatus } from '@/lib/supabase';
 
-// Initialize Notion client
-const notion = new Client({
-  auth: process.env.NOTION_API_KEY,
-});
+// Lazy initialize Notion client
+function getNotionClient() {
+  return new Client({
+    auth: process.env.NOTION_API_KEY,
+  });
+}
 
-// Initialize Gmail transporter
-const gmailTransporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD, // Use App Password, not regular password
-  },
-});
+// Lazy initialize Gmail transporter
+function getGmailTransporter() {
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD, // Use App Password, not regular password
+    },
+  });
+}
 
 export async function POST(request: NextRequest) {
   console.log('[Execute API] Starting action execution...');
@@ -119,6 +123,7 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
     }
 
     // Create page in Notion database
+    const notion = getNotionClient();
     const response = await notion.pages.create({
       parent: {
         database_id: notionDatabaseId,
@@ -177,6 +182,7 @@ async function executeGmailSend(params: SendEmailParams): Promise<ExecutionResul
     console.log('[Gmail] Sending email to:', params.to);
 
     // Send email
+    const gmailTransporter = getGmailTransporter();
     const info = await gmailTransporter.sendMail({
       from: process.env.GMAIL_USER,
       to: params.to,
