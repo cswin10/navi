@@ -1,11 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse } from '@/lib/types';
-import { generateHMACSignature } from '@/lib/crypto';
+import { Client } from '@notionhq/client';
+import nodemailer from 'nodemailer';
+import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, SendEmailParams } from '@/lib/types';
 import { createAction, updateActionStatus } from '@/lib/supabase';
 
-const N8N_WEBHOOK_URL_NOTION = process.env.N8N_WEBHOOK_URL_NOTION;
-const N8N_WEBHOOK_URL_EMAIL = process.env.N8N_WEBHOOK_URL_EMAIL;
-const N8N_WEBHOOK_SECRET = process.env.N8N_WEBHOOK_SECRET!;
+// Lazy initialize Notion client
+function getNotionClient() {
+  return new Client({
+    auth: process.env.NOTION_API_KEY,
+  });
+}
+
+// Lazy initialize Gmail transporter
+function getGmailTransporter() {
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD, // Use App Password, not regular password
+    },
+  });
+}
 
 export async function POST(request: NextRequest) {
   console.log('[Execute API] Starting action execution...');
@@ -46,58 +61,25 @@ export async function POST(request: NextRequest) {
 
     console.log('[Execute API] Action created:', action.id);
 
-    // Determine webhook URL based on intent
-    let webhookUrl: string | undefined;
+    let result: ExecutionResult;
+
+    // Execute based on intent type
     switch (intent.intent) {
       case 'create_task':
-        webhookUrl = N8N_WEBHOOK_URL_NOTION;
+        result = await executeNotionTask(intent.parameters as CreateTaskParams);
         break;
       case 'send_email':
-        webhookUrl = N8N_WEBHOOK_URL_EMAIL;
+        result = await executeGmailSend(intent.parameters as SendEmailParams);
         break;
       default:
         throw new Error(`Unsupported intent: ${intent.intent}`);
     }
 
-    if (!webhookUrl) {
-      throw new Error(`No webhook URL configured for intent: ${intent.intent}`);
-    }
-
-    // Prepare payload for n8n
-    const payload = {
-      intent: intent.intent,
-      parameters: intent.parameters,
-      actionId: action.id,
-      timestamp: new Date().toISOString(),
-    };
-
-    // Generate HMAC signature
-    const signature = generateHMACSignature(payload, N8N_WEBHOOK_SECRET);
-
-    console.log('[Execute API] Calling n8n webhook:', webhookUrl);
-
-    // Call n8n webhook
-    const webhookResponse = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Signature': signature,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!webhookResponse.ok) {
-      const errorText = await webhookResponse.text();
-      console.error('[Execute API] Webhook error:', errorText);
-      throw new Error(`Webhook request failed: ${webhookResponse.status} - ${errorText}`);
-    }
-
-    const result: ExecutionResult = await webhookResponse.json();
-    console.log('[Execute API] Webhook response:', result);
+    console.log('[Execute API] Execution result:', result);
 
     // Update action status
     const proofLink = result.notion_url || undefined;
-    await updateActionStatus(action.id, 'completed', result, proofLink);
+    await updateActionStatus(action.id, result.success ? 'completed' : 'failed', result, proofLink);
 
     console.log('[Execute API] Execution completed successfully');
 
@@ -115,5 +97,111 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Create a task in Notion
+ */
+async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionResult> {
+  try {
+    console.log('[Notion] Creating task:', params);
+
+    const notionDatabaseId = process.env.NOTION_DATABASE_ID;
+    if (!notionDatabaseId) {
+      throw new Error('NOTION_DATABASE_ID not configured');
+    }
+
+    // Parse due date
+    let dueDate = null;
+    if (params.due_date) {
+      try {
+        dueDate = new Date(params.due_date).toISOString().split('T')[0];
+      } catch (e) {
+        console.warn('[Notion] Invalid due date:', params.due_date);
+      }
+    }
+
+    // Create page in Notion database
+    const notion = getNotionClient();
+    const response = await notion.pages.create({
+      parent: {
+        database_id: notionDatabaseId,
+      },
+      properties: {
+        // Title property (usually named "Name" or "Title")
+        Name: {
+          title: [
+            {
+              text: {
+                content: params.title,
+              },
+            },
+          ],
+        },
+        // Due date property (if exists)
+        ...(dueDate && {
+          'Due Date': {
+            date: {
+              start: dueDate,
+            },
+          },
+        }),
+        // Priority property (if exists)
+        ...(params.priority && {
+          Priority: {
+            select: {
+              name: params.priority.charAt(0).toUpperCase() + params.priority.slice(1),
+            },
+          },
+        }),
+      },
+    });
+
+    console.log('[Notion] Task created:', response.id);
+
+    return {
+      success: true,
+      task_id: response.id,
+      notion_url: response.url,
+    };
+  } catch (error: any) {
+    console.error('[Notion] Error creating task:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to create Notion task',
+    };
+  }
+}
+
+/**
+ * Send email via Gmail
+ */
+async function executeGmailSend(params: SendEmailParams): Promise<ExecutionResult> {
+  try {
+    console.log('[Gmail] Sending email to:', params.to);
+
+    // Send email
+    const gmailTransporter = getGmailTransporter();
+    const info = await gmailTransporter.sendMail({
+      from: process.env.GMAIL_USER,
+      to: params.to,
+      subject: params.subject,
+      text: params.body,
+      html: `<p>${params.body.replace(/\n/g, '<br>')}</p>`,
+    });
+
+    console.log('[Gmail] Email sent:', info.messageId);
+
+    return {
+      success: true,
+      message_id: info.messageId,
+    };
+  } catch (error: any) {
+    console.error('[Gmail] Error sending email:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to send email',
+    };
   }
 }

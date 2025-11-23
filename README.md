@@ -9,7 +9,7 @@ Navi is a voice-first AI personal operator that executes real actions. Press, sp
 3. **Intent Parsing** → Transcribed text processed by Anthropic Claude
 4. **Voice Response** → Navi responds with ElevenLabs TTS
 5. **Confirmation** → User confirms or cancels the action
-6. **Execution** → n8n webhook triggered to execute action (Notion task creation or Gmail send)
+6. **Execution** → Direct API calls to Notion or Gmail (no middleman!)
 7. **Proof** → Display execution result with proof link
 8. **Memory** → All actions logged in Supabase
 
@@ -20,7 +20,7 @@ Navi is a voice-first AI personal operator that executes real actions. Press, sp
 - **Transcription:** OpenAI Whisper API
 - **Intent Parsing:** Anthropic Claude API (Claude Sonnet 4.5)
 - **Text-to-Speech:** ElevenLabs API
-- **Actions:** n8n webhooks (HMAC-signed)
+- **Actions:** Direct Notion API & Gmail (Nodemailer)
 - **Database:** Supabase (PostgreSQL)
 
 ## Project Structure
@@ -35,7 +35,7 @@ navi/
 │   │   ├── transcribe/route.ts     # Whisper API integration
 │   │   ├── process/route.ts        # Claude intent parsing
 │   │   ├── speak/route.ts          # ElevenLabs TTS
-│   │   └── execute/route.ts        # n8n webhook execution
+│   │   └── execute/route.ts        # Direct Notion & Gmail execution
 ├── components/
 │   ├── VoiceInput.tsx              # Press-and-hold recording button
 │   ├── TranscriptDisplay.tsx       # Shows transcribed text
@@ -43,8 +43,7 @@ navi/
 │   └── ProofPanel.tsx              # Execution result display
 ├── lib/
 │   ├── types.ts                    # TypeScript type definitions
-│   ├── supabase.ts                 # Supabase client + helpers
-│   └── crypto.ts                   # HMAC signature generation
+│   └── supabase.ts                 # Supabase client + helpers
 └── public/
 ```
 
@@ -71,9 +70,10 @@ Required environment variables:
 - `OPENAI_API_KEY` - Get from https://platform.openai.com/api-keys
 - `ANTHROPIC_API_KEY` - Get from https://console.anthropic.com/settings/keys
 - `ELEVENLABS_API_KEY` - Get from https://elevenlabs.io/app/settings/api-keys
-- `N8N_WEBHOOK_URL_NOTION` - Your n8n Notion webhook URL
-- `N8N_WEBHOOK_URL_EMAIL` - Your n8n Gmail webhook URL
-- `N8N_WEBHOOK_SECRET` - Generate with `openssl rand -hex 32`
+- `NOTION_API_KEY` - Get from https://www.notion.so/my-integrations
+- `NOTION_DATABASE_ID` - The ID of your Notion database
+- `GMAIL_USER` - Your Gmail address
+- `GMAIL_APP_PASSWORD` - Gmail App Password (generate from https://myaccount.google.com/apppasswords)
 - `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anon key
 - `SUPABASE_SERVICE_KEY` - Your Supabase service key
@@ -126,80 +126,49 @@ CREATE POLICY "Allow all operations on actions" ON actions
 
 3. Get your project URL and keys from Settings → API
 
-### 4. n8n Workflows Setup
+### 4. Notion Setup
 
-You need to create two n8n workflows:
+1. Go to https://www.notion.so/my-integrations
+2. Click **"+ New integration"**
+3. Give it a name (e.g., "Navi")
+4. Select the workspace where your database is
+5. Copy the **Internal Integration Token** → This is your `NOTION_API_KEY`
 
-#### Workflow 1: Notion Task Creation
+#### Step 2: Create a Notion Database
 
-1. Create a new workflow in n8n
-2. Add a **Webhook** node as trigger:
-   - **HTTP Method:** POST
-   - **Path:** `notion-task` (or your preferred path)
-   - **Authentication:** Header Auth
-     - **Header Name:** `X-Signature`
-     - **Value:** Use HMAC verification (see below)
+1. Create a new database in Notion (or use existing)
+2. Add these properties to your database:
+   - **Name** (Title) - Default property
+   - **Due Date** (Date) - Optional
+   - **Priority** (Select with options: High, Medium, Low) - Optional
 
-3. Add a **Function** node to verify HMAC signature:
+3. Get your database ID:
+   - Open the database as a full page
+   - Copy the URL: `https://notion.so/workspace/DATABASE_ID?v=...`
+   - The `DATABASE_ID` is the long string between the last `/` and `?`
+   - Example: In `https://notion.so/myworkspace/a8aec43384f447ed84390e8e42c2e089?v=...`
+   - Database ID is: `a8aec43384f447ed84390e8e42c2e089`
 
-```javascript
-const crypto = require('crypto');
+4. Share the database with your integration:
+   - Open the database
+   - Click **"•••"** (top right)
+   - Click **"Add connections"**
+   - Select your integration (e.g., "Navi")
 
-const payload = JSON.stringify($json);
-const signature = $node["Webhook"].json.headers['x-signature'];
-const secret = 'YOUR_N8N_WEBHOOK_SECRET'; // Same as in .env.local
+#### Step 3: Set up Gmail
 
-const hmac = crypto.createHmac('sha256', secret);
-hmac.update(payload);
-const expectedSignature = hmac.digest('hex');
+1. **Enable 2-Step Verification** on your Google account:
+   - Go to https://myaccount.google.com/security
+   - Enable "2-Step Verification" if not already on
 
-if (signature !== expectedSignature) {
-  throw new Error('Invalid signature');
-}
+2. **Generate App Password**:
+   - Go to https://myaccount.google.com/apppasswords
+   - Select app: "Mail"
+   - Select device: "Other" (name it "Navi")
+   - Click **"Generate"**
+   - Copy the 16-character password → This is your `GMAIL_APP_PASSWORD`
 
-return $json;
-```
-
-4. Add a **Notion** node:
-   - **Operation:** Create Database Page
-   - **Database ID:** Your Notion database ID
-   - **Properties:**
-     - **Title:** `{{$json.parameters.title}}`
-     - **Due Date:** `{{$json.parameters.due_date}}`
-     - **Priority:** `{{$json.parameters.priority}}`
-
-5. Add a **Function** node to format response:
-
-```javascript
-return {
-  success: true,
-  task_id: $json.id,
-  notion_url: $json.url
-};
-```
-
-6. Activate the workflow and copy the webhook URL to `N8N_WEBHOOK_URL_NOTION`
-
-#### Workflow 2: Gmail Send
-
-1. Create a new workflow in n8n
-2. Add a **Webhook** node as trigger (same HMAC verification as above)
-3. Add a **Gmail** node:
-   - **Operation:** Send Email
-   - **To:** `{{$json.parameters.to}}`
-   - **Subject:** `{{$json.parameters.subject}}`
-   - **Message:** `{{$json.parameters.body}}`
-
-4. Add a **Function** node to format response:
-
-```javascript
-return {
-  success: true,
-  message_id: $json.id
-};
-```
-
-5. Activate the workflow and copy the webhook URL to `N8N_WEBHOOK_URL_EMAIL`
+3. Your `GMAIL_USER` is just your regular Gmail address (e.g., `yourname@gmail.com`)
 
 ### 5. Run the App
 
@@ -237,7 +206,7 @@ Open http://localhost:3000 in your browser.
 - `POST /api/transcribe` - Whisper transcription
 - `POST /api/process` - Claude intent parsing
 - `POST /api/speak` - ElevenLabs TTS
-- `POST /api/execute` - n8n webhook execution
+- `POST /api/execute` - Direct Notion & Gmail execution
 
 ### Key Components
 
@@ -248,10 +217,11 @@ Open http://localhost:3000 in your browser.
 
 ## Security Notes
 
-- All n8n webhooks are secured with HMAC signatures
+- Direct API integrations (no third-party webhooks)
 - Supabase RLS is enabled (policies should be tightened for production)
-- API keys are stored in environment variables
-- Client-side uses anon key only, server uses service key
+- API keys are stored in environment variables (never exposed to client)
+- Client-side uses Supabase anon key only, server uses service key
+- Gmail uses App Passwords (not main account password)
 
 ## Production Checklist
 
@@ -261,8 +231,9 @@ Open http://localhost:3000 in your browser.
 - [ ] Add error tracking (Sentry)
 - [ ] Set up monitoring
 - [ ] Configure CORS properly
-- [ ] Use production n8n instance
 - [ ] Rotate API keys regularly
+- [ ] Review and limit Notion integration permissions
+- [ ] Set up email sending limits to prevent abuse
 
 ## V1 Scope
 
@@ -272,7 +243,7 @@ Open http://localhost:3000 in your browser.
 - ✅ Claude intent parsing (create_task, send_email)
 - ✅ ElevenLabs voice response
 - ✅ Confirmation flow
-- ✅ n8n webhook execution with HMAC
+- ✅ Direct Notion & Gmail API integration
 - ✅ Proof display
 - ✅ Supabase logging
 
@@ -308,10 +279,19 @@ Open http://localhost:3000 in your browser.
 - Check console for audio errors
 
 ### Execution fails
-- Verify n8n workflows are active
-- Check `N8N_WEBHOOK_SECRET` matches in both places
-- Test n8n webhooks directly with curl
-- Review n8n workflow execution logs
+
+**Notion tasks:**
+- Check `NOTION_API_KEY` is valid
+- Verify `NOTION_DATABASE_ID` is correct
+- Ensure database is shared with your integration
+- Check database properties match (Name, Due Date, Priority)
+- Review Vercel/server logs for error details
+
+**Gmail:**
+- Check `GMAIL_USER` is correct
+- Verify `GMAIL_APP_PASSWORD` is valid (16 characters)
+- Ensure 2-Step Verification is enabled on Google account
+- Try generating a new App Password if issues persist
 
 ## License
 
