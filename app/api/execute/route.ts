@@ -148,54 +148,13 @@ async function executeNotionTask(params: CreateTaskParams): Promise<ExecutionRes
     // Create page in Notion database
     const notion = getNotionClient();
 
-    // First, get the database schema to find the title property name
-    console.log('[Notion] Retrieving database schema for:', notionDatabaseId);
+    console.log('[Notion] Creating page in database:', notionDatabaseId);
 
-    let database;
-    try {
-      database = await notion.databases.retrieve({ database_id: notionDatabaseId });
-    } catch (notionError: any) {
-      console.error('[Notion] API Error:', notionError);
-      console.error('[Notion] Error code:', notionError.code);
-      console.error('[Notion] Error body:', JSON.stringify(notionError.body, null, 2));
-      throw new Error(`Notion API error: ${notionError.message || 'Failed to retrieve database'}. Check that your Notion integration has access to this database.`);
-    }
-
-    console.log('[Notion] Database response object type:', database.object);
-    console.log('[Notion] Database response keys:', Object.keys(database).join(', '));
-    console.log('[Notion] Has properties field:', 'properties' in database);
-    console.log('[Notion] Full database response:', JSON.stringify(database, null, 2));
-
-    // Check if this is a full database response (not partial)
-    if (!('properties' in database)) {
-      throw new Error(`Failed to retrieve database schema. Database ID: ${notionDatabaseId}. The database was found but properties are not accessible.
-
-Possible issues:
-1. Notion integration not connected to this specific database (go to the database page → ... menu → Connections → add your integration)
-2. Integration doesn't have 'Read content' capability (check https://www.notion.so/my-integrations)
-3. Wrong database ID (verify in Vercel env vars)
-
-Response received: ${JSON.stringify(database)}`);
-    }
-
-    // TypeScript: Use any after runtime check since Notion SDK types are complex
-    const dbProperties = (database as any).properties as Record<string, any>;
-    console.log('[Notion] Available properties:', Object.keys(dbProperties).join(', '));
-
-    // Find the title property (every database has exactly one)
-    let titlePropertyName = 'Name'; // default fallback
-    for (const [propertyName, propertyValue] of Object.entries(dbProperties)) {
-      if ((propertyValue as any).type === 'title') {
-        titlePropertyName = propertyName;
-        break;
-      }
-    }
-
-    console.log('[Notion] Using title property:', titlePropertyName);
-
-    // Build properties object dynamically
+    // Try common property names for Notion databases
+    // Since we can't retrieve schema (inline DB permission issue), we'll try standard names
     const properties: any = {
-      [titlePropertyName]: {
+      // Try 'Name' first (most common title property)
+      'Name': {
         title: [
           {
             text: {
@@ -206,8 +165,8 @@ Response received: ${JSON.stringify(database)}`);
       },
     };
 
-    // Only add optional properties if they exist in the database
-    if (dueDate && dbProperties['Due Date']) {
+    // Add due date if provided
+    if (dueDate) {
       properties['Due Date'] = {
         date: {
           start: dueDate,
@@ -215,7 +174,8 @@ Response received: ${JSON.stringify(database)}`);
       };
     }
 
-    if (params.priority && dbProperties['Priority']) {
+    // Add priority if provided
+    if (params.priority) {
       properties['Priority'] = {
         select: {
           name: params.priority.charAt(0).toUpperCase() + params.priority.slice(1),
@@ -223,12 +183,47 @@ Response received: ${JSON.stringify(database)}`);
       };
     }
 
-    const response = await notion.pages.create({
-      parent: {
-        database_id: notionDatabaseId,
-      },
-      properties,
-    });
+    console.log('[Notion] Creating page with properties:', JSON.stringify(properties, null, 2));
+
+    let response;
+    try {
+      response = await notion.pages.create({
+        parent: {
+          database_id: notionDatabaseId,
+        },
+        properties,
+      });
+    } catch (createError: any) {
+      console.error('[Notion] Failed to create page:', createError);
+      console.error('[Notion] Error body:', JSON.stringify(createError.body, null, 2));
+
+      // If property name is wrong, try alternative common names
+      if (createError.body?.message?.includes('does not exist')) {
+        console.log('[Notion] Retrying with alternative property name "Title"');
+
+        const altProperties: any = {
+          'Title': {
+            title: [
+              {
+                text: {
+                  content: params.title,
+                },
+              },
+            ],
+          },
+        };
+
+        // Try again without optional properties
+        response = await notion.pages.create({
+          parent: {
+            database_id: notionDatabaseId,
+          },
+          properties: altProperties,
+        });
+      } else {
+        throw createError;
+      }
+    }
 
     console.log('[Notion] Task created:', response.id);
 
