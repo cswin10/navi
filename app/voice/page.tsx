@@ -8,7 +8,7 @@ import TranscriptDisplay from '@/components/TranscriptDisplay';
 import ConfirmationPanel from '@/components/ConfirmationPanel';
 import ProofPanel from '@/components/ProofPanel';
 import { InstallPrompt } from '@/components/ui/InstallPrompt';
-import { AppState, ActionState, ClaudeIntentResponse } from '@/lib/types';
+import { AppState, ActionState, ClaudeIntentResponse, ExecutionResult } from '@/lib/types';
 import { createClient } from '@/lib/supabase-browser';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, LogOut, LayoutDashboard } from 'lucide-react';
