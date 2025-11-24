@@ -124,7 +124,26 @@ export default function VoicePage() {
         throw new Error(processData.error || 'Failed to process intent');
       }
 
-      console.log('[App] Intent processed:', processData.intent || processData.intents);
+      console.log('[App] Intent processed:', JSON.stringify(processData.intent || processData.intents, null, 2));
+
+      // Validate single intent has required fields
+      if (processData.intent && !processData.intent.intent) {
+        console.error('[App] Invalid intent from process API - missing intent field:', processData.intent);
+        throw new Error('Invalid response from assistant - please try again');
+      }
+
+      // Validate multiple intents have required fields
+      if (processData.intents) {
+        const invalidIntents = processData.intents.filter((i: any) => !i || !i.intent);
+        if (invalidIntents.length > 0) {
+          console.error('[App] Invalid intents from process API:', invalidIntents);
+        }
+        // Filter to only valid intents
+        processData.intents = processData.intents.filter((i: any) => i && i.intent);
+        if (processData.intents.length === 0) {
+          throw new Error('Invalid response from assistant - please try again');
+        }
+      }
 
       // Determine the response text for TTS
       const responseText = processData.response || processData.intent?.response || '';
@@ -282,29 +301,25 @@ export default function VoicePage() {
 
           const speakData = await speakResponse.json();
 
-          if (speakData.success && speakData.audioUrl) {
-            setActionState((prev) => ({
-              ...prev,
-              executionResult: executeData.result,
-              audioUrl: speakData.audioUrl,
-            }));
-          } else {
-            setActionState((prev) => ({
-              ...prev,
-              executionResult: executeData.result,
-            }));
-          }
+          setActionState((prev) => ({
+            ...prev,
+            executionResult: executeData.result,
+            // Always update audioUrl - either with new audio or null to prevent old audio from playing
+            audioUrl: (speakData.success && speakData.audioUrl) ? speakData.audioUrl : null,
+          }));
         } catch (speakError) {
           console.error('[App] TTS generation failed:', speakError);
           setActionState((prev) => ({
             ...prev,
             executionResult: executeData.result,
+            audioUrl: null, // Clear old audio to prevent replay
           }));
         }
       } else {
         setActionState((prev) => ({
           ...prev,
           executionResult: executeData.result,
+          audioUrl: null, // Clear old audio
         }));
       }
 
@@ -424,29 +439,25 @@ export default function VoicePage() {
 
           const speakData = await speakResponse.json();
 
-          if (speakData.success && speakData.audioUrl) {
-            setActionState((prev) => ({
-              ...prev,
-              executionResult: combinedResult,
-              audioUrl: speakData.audioUrl,
-            }));
-          } else {
-            setActionState((prev) => ({
-              ...prev,
-              executionResult: combinedResult,
-            }));
-          }
+          setActionState((prev) => ({
+            ...prev,
+            executionResult: combinedResult,
+            // Always update audioUrl - either with new audio or null to prevent old audio from playing
+            audioUrl: (speakData.success && speakData.audioUrl) ? speakData.audioUrl : null,
+          }));
         } catch (speakError) {
           console.error('[App] TTS generation failed:', speakError);
           setActionState((prev) => ({
             ...prev,
             executionResult: combinedResult,
+            audioUrl: null, // Clear old audio to prevent replay
           }));
         }
       } else {
         setActionState((prev) => ({
           ...prev,
           executionResult: combinedResult,
+          audioUrl: null, // Clear old audio
         }));
       }
 

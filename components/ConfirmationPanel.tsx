@@ -27,16 +27,27 @@ export default function ConfirmationPanel({
   const displayIntents = hasMultiple ? intents : [intent];
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [hasPlayedAudio, setHasPlayedAudio] = useState(false);
+  const initialAudioUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Auto-play voice response when audioUrl is available
-    if (audioUrl && audioRef.current) {
+    // Store the initial audioUrl to only play it once
+    if (audioUrl && !initialAudioUrlRef.current) {
+      initialAudioUrlRef.current = audioUrl;
+    }
+  }, [audioUrl]);
+
+  useEffect(() => {
+    // Auto-play voice response only once when initially mounted with audioUrl
+    // Don't replay if audioUrl changes (e.g., after execution starts)
+    if (audioUrl && audioRef.current && !hasPlayedAudio && audioUrl === initialAudioUrlRef.current && !isExecuting) {
       console.log('[ConfirmationPanel] Auto-playing voice response');
+      setHasPlayedAudio(true);
       audioRef.current.play().catch((error) => {
         console.error('[ConfirmationPanel] Failed to auto-play:', error);
       });
     }
-  }, [audioUrl]);
+  }, [audioUrl, hasPlayedAudio, isExecuting]);
 
   const handleAudioPlay = () => {
     setIsPlaying(true);
