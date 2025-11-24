@@ -1,4 +1,4 @@
-# PWA Icon Setup for NaviOS
+# PWA Icon Setup for Navi AI
 
 Your app is now configured as a PWA (Progressive Web App) and can be installed on mobile home screens!
 
@@ -32,7 +32,7 @@ Save as SVG, then convert to PNG at:
 - 512x512px for icon-512.png
 
 ### Option 3: Use Your Logo
-If you have a NaviOS logo:
+If you have a Navi AI logo:
 1. Make it square (1:1 aspect ratio)
 2. Resize to 512x512px
 3. Export as PNG

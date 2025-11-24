@@ -33,7 +33,7 @@ export function Hero() {
           >
             <Sparkles className="w-12 h-12 text-blue-400" />
             <h1 className="text-6xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              NaviOS
+              Navi AI
             </h1>
           </motion.div>
 

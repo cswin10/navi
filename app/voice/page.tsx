@@ -1,12 +1,13 @@
 'use client';
 
-// NaviOS - Voice-first AI Personal Operating System
+// Navi AI - Voice-first AI Personal Operating System
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import VoiceInput from '@/components/VoiceInput';
 import TranscriptDisplay from '@/components/TranscriptDisplay';
 import ConfirmationPanel from '@/components/ConfirmationPanel';
 import ProofPanel from '@/components/ProofPanel';
+import { InstallPrompt } from '@/components/ui/InstallPrompt';
 import { AppState, ActionState, ClaudeIntentResponse } from '@/lib/types';
 import { createClient } from '@/lib/supabase-browser';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -292,7 +293,7 @@ export default function VoicePage() {
           <div className="flex items-center gap-2">
             <Sparkles className="w-6 h-6 text-blue-400" />
             <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              NaviOS
+              Navi AI
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -447,6 +448,9 @@ export default function VoicePage() {
           <p className="mt-1">Powered by OpenAI Whisper • Anthropic Claude • ElevenLabs</p>
         </motion.div>
       </div>
+
+      {/* Install Prompt */}
+      <InstallPrompt />
     </div>
   );
 }

@@ -13,7 +13,7 @@ export function Navigation() {
           <Link href="/" className="flex items-center gap-2">
             <Sparkles className="w-6 h-6 text-blue-400" />
             <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              NaviOS
+              Navi AI
             </span>
           </Link>
 
