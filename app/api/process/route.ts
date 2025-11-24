@@ -52,8 +52,9 @@ IMPORTANT RULES:
 - When user wants to add calendar event(s), use "add_calendar_event" or "timeblock_day"
 - When user asks what's on calendar, use "get_calendar_events"
 - For timeblocking, parse multiple time blocks from natural language
+- MULTIPLE INTENTS: If user requests multiple actions (e.g., "add calendar event AND create a task"), return ARRAY of intents
 
-Respond with JSON:
+Respond with JSON (SINGLE INTENT):
 {
   "intent": "create_task" | "send_email" | "remember" | "get_weather" | "get_news" | "add_calendar_event" | "get_calendar_events" | "timeblock_day" | "create_note" | "other",
   "response": "Brief response",
@@ -107,6 +108,23 @@ Respond with JSON:
   }
 }
 
+OR MULTIPLE INTENTS (return array):
+{
+  "intents": [
+    {
+      "intent": "...",
+      "response": "Brief response",
+      "parameters": { ... }
+    },
+    {
+      "intent": "...",
+      "response": "Brief response",
+      "parameters": { ... }
+    }
+  ],
+  "response": "Brief combined response (e.g., 'I'll add the meeting and create that task.')"
+}
+
 Examples:
 - User: "create a task" → intent: "other", response: "What should the task be?"
 - User: "task about demo tomorrow" → intent: "create_task", response: "I'll create a task 'demo' due tomorrow. Proceed?"
@@ -119,6 +137,14 @@ Examples:
 - User: "add a meeting at 2pm tomorrow" → intent: "add_calendar_event", response: "I'll add a meeting to your calendar at 2pm tomorrow."
 - User: "what do I have today?" → intent: "get_calendar_events", response: "Let me check your calendar for today."
 - User: "timeblock my day: 9-11am deep work, 11-12pm emails, 1-3pm calls, 3-5pm project work" → intent: "timeblock_day", response: "I'll create those 4 time blocks for today."
+- User: "add a meeting at 3pm tomorrow and create a task to prepare slides" → MULTIPLE INTENTS:
+  {
+    "intents": [
+      {"intent": "add_calendar_event", "response": "Meeting added", "parameters": {"title": "Meeting", "start_time": "3pm", ...}},
+      {"intent": "create_task", "response": "Task created", "parameters": {"title": "Prepare slides", ...}}
+    ],
+    "response": "I'll add the meeting at 3pm and create a task to prepare slides."
+  }
 - User: "hi" → intent: "other", response: "Hey! What do you need?"`;
 }
 
@@ -202,7 +228,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse the JSON response from Claude
-    let intentResponse: ClaudeIntentResponse;
     try {
       // Extract JSON from the response (Claude might wrap it in markdown code blocks)
       const textContent = contentBlock.text;
@@ -210,18 +235,29 @@ export async function POST(request: NextRequest) {
       if (!jsonMatch) {
         throw new Error('No JSON found in Claude response');
       }
-      intentResponse = JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(jsonMatch[0]);
+
+      // Check if it's multiple intents or single intent
+      if (parsed.intents && Array.isArray(parsed.intents)) {
+        // Multiple intents
+        console.log('[Process API] Parsed multiple intents:', parsed.intents.length);
+        return NextResponse.json<ProcessResponse>({
+          success: true,
+          intents: parsed.intents,
+          response: parsed.response,
+        });
+      } else {
+        // Single intent
+        console.log('[Process API] Parsed single intent:', parsed.intent);
+        return NextResponse.json<ProcessResponse>({
+          success: true,
+          intent: parsed as ClaudeIntentResponse,
+        });
+      }
     } catch (parseError) {
       console.error('[Process API] Failed to parse Claude response:', parseError);
       throw new Error('Failed to parse intent from Claude response');
     }
-
-    console.log('[Process API] Parsed intent:', intentResponse);
-
-    return NextResponse.json<ProcessResponse>({
-      success: true,
-      intent: intentResponse,
-    });
   } catch (error: any) {
     console.error('[Process API] Error:', error);
     return NextResponse.json<ProcessResponse>(

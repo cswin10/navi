@@ -157,7 +157,8 @@ async function executeCreateTask(userId: string, params: CreateTaskParams): Prom
 
     return {
       success: true,
-      response: `Task created: ${params.title}`,
+      displayResponse: `Task created: "${params.title}"${params.due_date ? ` (Due: ${params.due_date})` : ''}`,
+      spokenResponse: `Task created.`,
     };
   } catch (error: any) {
     console.error('[Execute] Task creation failed:', error);
@@ -451,7 +452,8 @@ async function executeAddCalendarEvent(userId: string, params: AddCalendarEventP
 
     return {
       success: true,
-      response: `Event "${params.title}" added to your calendar at ${params.start_time}`,
+      displayResponse: `Event "${params.title}" added to your calendar at ${params.start_time}${params.end_time ? ` to ${params.end_time}` : ''}`,
+      spokenResponse: `Event added to your calendar.`,
     };
   } catch (error: any) {
     console.error('[Execute] Calendar event creation failed:', error);
@@ -637,15 +639,21 @@ async function executeTimeblockDay(userId: string, params: TimeblockDayParams): 
       };
     }
 
-    let response = `Created ${createdEvents.length} time block${createdEvents.length > 1 ? 's' : ''} for ${params.date || 'today'}:\n\n${createdEvents.join('\n')}`;
+    // Detailed response for display
+    let displayResponse = `Created ${createdEvents.length} time block${createdEvents.length > 1 ? 's' : ''} for ${params.date || 'today'}:\n\n${createdEvents.join('\n')}`;
 
     if (failedEvents.length > 0) {
-      response += `\n\nFailed to create: ${failedEvents.join(', ')}`;
+      displayResponse += `\n\nFailed to create: ${failedEvents.join(', ')}`;
     }
+
+    // Brief response for TTS
+    const count = createdEvents.length;
+    const spokenResponse = `I've added ${count} time block${count > 1 ? 's' : ''} to your calendar${failedEvents.length > 0 ? `, but ${failedEvents.length} failed` : ''}.`;
 
     return {
       success: true,
-      response,
+      displayResponse,
+      spokenResponse,
     };
   } catch (error: any) {
     console.error('[Execute] Timeblocking failed:', error);
@@ -693,7 +701,8 @@ async function executeCreateNote(userId: string, params: CreateNoteParams): Prom
     const folderText = params.folder ? ` in your ${params.folder} folder` : '';
     return {
       success: true,
-      response: `Note "${params.title}" created${folderText}`,
+      displayResponse: `Note "${params.title}" created${folderText}`,
+      spokenResponse: `Note created.`,
     };
   } catch (error: any) {
     console.error('[Execute] Note creation failed:', error);

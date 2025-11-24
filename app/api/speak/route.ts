@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TTSResponse } from '@/lib/types';
 import { getCurrentUser } from '@/lib/auth';
+import { formatForTTS } from '@/lib/tts-formatter';
 
 // ElevenLabs API configuration
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
@@ -28,6 +29,10 @@ export async function POST(request: NextRequest) {
 
     console.log('[Speak API] Converting text to speech:', text);
 
+    // Format text for more natural TTS
+    const formattedText = formatForTTS(text);
+    console.log('[Speak API] Formatted text:', formattedText);
+
     // Call ElevenLabs API
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
@@ -39,7 +44,7 @@ export async function POST(request: NextRequest) {
           'xi-api-key': ELEVENLABS_API_KEY!,
         },
         body: JSON.stringify({
-          text,
+          text: formattedText,
           model_id: 'eleven_monolingual_v1',
           voice_settings: {
             stability: 0.5,
