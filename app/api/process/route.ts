@@ -46,10 +46,12 @@ IMPORTANT RULES:
 - Be direct and conversational
 - For dates: Use ISO format (YYYY-MM-DD) in due_date field
 - When user says "remember that...", "note that...", "keep in mind...", use intent "remember"
+- When user asks about weather, use intent "get_weather"
+- When user asks about news, use intent "get_news"
 
 Respond with JSON:
 {
-  "intent": "create_task" | "send_email" | "remember" | "other",
+  "intent": "create_task" | "send_email" | "remember" | "get_weather" | "get_news" | "other",
   "response": "Brief response",
   "parameters": {
     // For create_task (ALL fields required):
@@ -65,6 +67,12 @@ Respond with JSON:
     // For remember:
     "section": "string (e.g. 'Important Contacts', 'Preferences', 'Current Projects')",
     "content": "string (what to remember)"
+
+    // For get_weather:
+    "location": "string (optional, city name - if not provided, use user's location from knowledge base)"
+
+    // For get_news:
+    "topic": "string (optional, e.g. 'technology', 'business', 'sports')"
   }
 }
 
@@ -72,6 +80,8 @@ Examples:
 - User: "create a task" → intent: "other", response: "What should the task be?"
 - User: "task about demo tomorrow" → intent: "create_task", response: "I'll create a task 'demo' due tomorrow. Proceed?"
 - User: "remember that John's email is john@company.com" → intent: "remember", response: "Got it! I'll remember John's email."
+- User: "what's the weather like?" → intent: "get_weather", response: "Let me check the weather for you."
+- User: "any news on AI?" → intent: "get_news", response: "Let me find the latest AI news."
 - User: "hi" → intent: "other", response: "Hey! What do you need?"`;
 }
 
@@ -121,11 +131,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Call Claude API with conversation context
+    // Call Claude API with prompt caching for cost optimization
+    // Cache the system prompt and conversation history to reduce costs by 50%+
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-5-20250929',
       max_tokens: 1024,
-      system: systemPrompt + conversationContext,
+      system: [
+        {
+          type: 'text',
+          text: systemPrompt,
+          cache_control: { type: 'ephemeral' }
+        },
+        ...(conversationContext ? [{
+          type: 'text' as const,
+          text: conversationContext,
+          cache_control: { type: 'ephemeral' as const }
+        }] : [])
+      ],
       messages: [
         {
           role: 'user',

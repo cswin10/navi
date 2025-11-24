@@ -163,8 +163,8 @@ export default function VoicePage() {
           }
         }
         setAppState('idle');
-      } else if (processData.intent.intent === 'remember') {
-        // Remember: Execute automatically without confirmation
+      } else if (['remember', 'get_weather', 'get_news'].includes(processData.intent.intent)) {
+        // Auto-execute: remember, weather, news (no confirmation needed)
         await handleConfirm();
       } else {
         // Actions (create_task, send_email): Require confirmation

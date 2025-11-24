@@ -1,5 +1,5 @@
 // Core intent types
-export type IntentType = 'create_task' | 'send_email' | 'remember' | 'other';
+export type IntentType = 'create_task' | 'send_email' | 'remember' | 'get_weather' | 'get_news' | 'other';
 
 export type Priority = 'high' | 'medium' | 'low';
 
@@ -23,7 +23,15 @@ export interface RememberParams {
   content: string;
 }
 
-export type IntentParams = CreateTaskParams | SendEmailParams | RememberParams | Record<string, unknown>;
+export interface GetWeatherParams {
+  location?: string; // Optional, defaults to user's location from knowledge base
+}
+
+export interface GetNewsParams {
+  topic?: string; // Optional, defaults to general news
+}
+
+export type IntentParams = CreateTaskParams | SendEmailParams | RememberParams | GetWeatherParams | GetNewsParams | Record<string, unknown>;
 
 // Claude API Response
 export interface ClaudeIntentResponse {
