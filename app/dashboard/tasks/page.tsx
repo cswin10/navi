@@ -194,21 +194,21 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-4xl font-bold text-white mb-2">Tasks</h1>
-          <p className="text-slate-400">Manage your tasks across all stages</p>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-1 sm:mb-2">Tasks</h1>
+          <p className="text-sm sm:text-base text-slate-400">Manage your tasks across all stages</p>
         </div>
-        <Button onClick={() => setShowAddModal(true)}>
+        <Button onClick={() => setShowAddModal(true)} className="w-full sm:w-auto text-sm">
           <Plus className="w-4 h-4 mr-2" />
           Add Task
         </Button>
       </div>
 
       {/* Kanban Board */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {(Object.keys(statusConfig) as TaskStatus[]).map(status => (
           <div
             key={status}
@@ -216,16 +216,18 @@ export default function TasksPage() {
             onDrop={() => handleDrop(status)}
             className="flex flex-col"
           >
-            <div className="mb-4">
-              <h2 className={`text-xl font-semibold ${statusConfig[status].color}`}>
-                {statusConfig[status].title}
-              </h2>
-              <p className="text-sm text-slate-400 mt-1">
-                {getTasksByStatus(status).length} tasks
-              </p>
+            <div className="mb-3 sm:mb-4 flex items-center justify-between">
+              <div>
+                <h2 className={`text-base sm:text-lg lg:text-xl font-semibold ${statusConfig[status].color}`}>
+                  {statusConfig[status].title}
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-400 mt-0.5 sm:mt-1">
+                  {getTasksByStatus(status).length} tasks
+                </p>
+              </div>
             </div>
 
-            <div className="space-y-3 flex-1">
+            <div className="space-y-2 sm:space-y-3 flex-1">
               {getTasksByStatus(status).map(task => (
                 <Card
                   key={task.id}
@@ -233,10 +235,10 @@ export default function TasksPage() {
                   onDragStart={() => handleDragStart(task)}
                   className="cursor-move hover:border-blue-500 transition-colors"
                 >
-                  <CardContent className="p-4">
+                  <CardContent className="p-3 sm:p-4">
                     <div className="flex items-start justify-between mb-2">
                       <h3
-                        className="text-white font-medium flex-1 cursor-pointer hover:text-blue-400"
+                        className="text-white font-medium text-sm sm:text-base flex-1 cursor-pointer hover:text-blue-400"
                         onClick={() => openEditModal(task)}
                       >
                         {task.title}
@@ -245,22 +247,22 @@ export default function TasksPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeleteTask(task.id)}
-                        className="ml-2 text-slate-400 hover:text-red-400"
+                        className="ml-2 text-slate-400 hover:text-red-400 p-1"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
 
                     {task.notes && (
-                      <p className="text-sm text-slate-400 mb-2 line-clamp-2">
+                      <p className="text-xs sm:text-sm text-slate-400 mb-2 line-clamp-2">
                         {task.notes}
                       </p>
                     )}
 
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant={task.priority}>{task.priority}</Badge>
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                      <Badge variant={task.priority} className="text-[10px] sm:text-xs">{task.priority}</Badge>
                       {task.due_date && (
-                        <div className="flex items-center gap-1 text-xs text-slate-400">
+                        <div className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-400">
                           <Calendar className="w-3 h-3" />
                           {formatDate(task.due_date)}
                         </div>
@@ -271,8 +273,8 @@ export default function TasksPage() {
               ))}
 
               {getTasksByStatus(status).length === 0 && (
-                <div className="text-center py-8 text-slate-500">
-                  <p className="text-sm">No tasks in this column</p>
+                <div className="text-center py-6 sm:py-8 text-slate-500">
+                  <p className="text-xs sm:text-sm">No tasks in this column</p>
                 </div>
               )}
             </div>

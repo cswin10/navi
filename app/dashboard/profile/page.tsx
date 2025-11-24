@@ -101,11 +101,11 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-4xl font-bold text-white mb-2">Profile</h1>
-        <p className="text-slate-400">Teach Navi about yourself for personalized assistance</p>
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-1 sm:mb-2">Profile</h1>
+        <p className="text-sm sm:text-base text-slate-400">Teach Navi about yourself for personalized assistance</p>
       </div>
 
       {/* Basic Information */}
@@ -179,32 +179,32 @@ export default function ProfilePage() {
           </div>
 
           {/* Examples of what to include */}
-          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 text-sm">
+          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 sm:p-4 text-sm">
             <p className="font-medium text-white mb-2">What to include:</p>
-            <div className="grid grid-cols-2 gap-3 text-slate-300">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 text-slate-300">
               <div>
-                <p className="text-green-400 font-medium mb-1">👥 People</p>
-                <p className="text-xs">Contacts, family, colleagues</p>
+                <p className="text-green-400 font-medium text-xs sm:text-sm mb-0.5 sm:mb-1">👥 People</p>
+                <p className="text-[10px] sm:text-xs">Contacts, family, colleagues</p>
               </div>
               <div>
-                <p className="text-green-400 font-medium mb-1">📍 Location</p>
-                <p className="text-xs">Where you're based, timezone</p>
+                <p className="text-green-400 font-medium text-xs sm:text-sm mb-0.5 sm:mb-1">📍 Location</p>
+                <p className="text-[10px] sm:text-xs">Where you're based, timezone</p>
               </div>
               <div>
-                <p className="text-green-400 font-medium mb-1">📅 Schedule</p>
-                <p className="text-xs">Work hours, recurring meetings</p>
+                <p className="text-green-400 font-medium text-xs sm:text-sm mb-0.5 sm:mb-1">📅 Schedule</p>
+                <p className="text-[10px] sm:text-xs">Work hours, recurring meetings</p>
               </div>
               <div>
-                <p className="text-green-400 font-medium mb-1">💼 Projects</p>
-                <p className="text-xs">Current work, deadlines</p>
+                <p className="text-green-400 font-medium text-xs sm:text-sm mb-0.5 sm:mb-1">💼 Projects</p>
+                <p className="text-[10px] sm:text-xs">Current work, deadlines</p>
               </div>
               <div>
-                <p className="text-green-400 font-medium mb-1">⚙️ Preferences</p>
-                <p className="text-xs">How you like things done</p>
+                <p className="text-green-400 font-medium text-xs sm:text-sm mb-0.5 sm:mb-1">⚙️ Preferences</p>
+                <p className="text-[10px] sm:text-xs">How you like things done</p>
               </div>
               <div>
-                <p className="text-green-400 font-medium mb-1">🎯 Goals</p>
-                <p className="text-xs">What you're working towards</p>
+                <p className="text-green-400 font-medium text-xs sm:text-sm mb-0.5 sm:mb-1">🎯 Goals</p>
+                <p className="text-[10px] sm:text-xs">What you're working towards</p>
               </div>
             </div>
           </div>
