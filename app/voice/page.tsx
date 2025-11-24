@@ -232,7 +232,7 @@ export default function VoicePage() {
       const cleanIntent = {
         intent: intent.intent,
         response: intent.response,
-        parameters: JSON.parse(JSON.stringify(intent.parameters)), // Deep clone to remove references
+        parameters: intent.parameters ? JSON.parse(JSON.stringify(intent.parameters)) : {}, // Deep clone to remove references
       };
 
       const executeResponse = await fetch('/api/execute', {
@@ -330,7 +330,7 @@ export default function VoicePage() {
           const cleanIntent = {
             intent: intent.intent,
             response: intent.response,
-            parameters: JSON.parse(JSON.stringify(intent.parameters)), // Deep clone to remove references
+            parameters: intent.parameters ? JSON.parse(JSON.stringify(intent.parameters)) : {}, // Deep clone to remove references
           };
 
           const executeResponse = await fetch('/api/execute', {
