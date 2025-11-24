@@ -7,33 +7,33 @@ import { Card, CardContent } from '@/components/ui/Card'
 const features = [
   {
     icon: Mic,
-    title: 'Voice-First Interface',
-    description: 'Simply speak your commands. NaviOS understands natural language and executes instantly.',
+    title: 'Natural Voice Commands',
+    description: 'Talk to Navi like you would a real assistant. She understands context and gets things done without complicated commands.',
   },
   {
     icon: CheckSquare,
-    title: 'Smart Task Management',
-    description: 'Create, organize, and track tasks with priority levels and due dates—all by voice.',
+    title: 'Task Management',
+    description: 'Create tasks, set priorities, and add due dates just by speaking. Navi keeps track of everything so you do not have to.',
   },
   {
     icon: Mail,
-    title: 'Email Integration',
-    description: 'Send emails hands-free. Just say who to email and what to say. NaviOS handles the rest.',
+    title: 'Send Emails Instantly',
+    description: 'Connect your Gmail and send professional emails with your voice. Navi drafts them, you approve them, done.',
   },
   {
     icon: Bell,
-    title: 'Intelligent Reminders',
-    description: 'Set reminders in natural language. "Remind me tomorrow at 3pm" just works.',
+    title: 'Calendar Intelligence',
+    description: 'Check your schedule, add events, and time block your day. Ask when you are free and Navi will tell you.',
   },
   {
     icon: Brain,
-    title: 'Learns Your Preferences',
-    description: 'NaviOS remembers your context and adapts to your workflow over time.',
+    title: 'Remembers Everything',
+    description: 'Tell Navi about your preferences, contacts, and workflows. She learns and gets smarter over time.',
   },
   {
     icon: Shield,
-    title: 'Private & Secure',
-    description: 'Your data is encrypted and isolated. Only you have access to your information.',
+    title: 'Your Data Stays Private',
+    description: 'Everything is encrypted and isolated to your account. We never sell or share your information.',
   },
 ]
 
@@ -49,13 +49,13 @@ export function Features() {
           className="text-center mb-16"
         >
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Everything You Need,{' '}
+            Built For{' '}
             <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              Nothing You Don't
+              How You Actually Work
             </span>
           </h2>
           <p className="text-xl text-slate-300 max-w-2xl mx-auto">
-            NaviOS is designed to be your personal AI operating system—powerful yet simple.
+            Navi connects to your real tools and handles the boring stuff, so you can focus on what matters.
           </p>
         </motion.div>
 
