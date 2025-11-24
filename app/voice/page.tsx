@@ -120,30 +120,40 @@ export default function VoicePage() {
 
       const processData = await processResponse.json();
 
-      if (!processData.success || (!processData.intent && !processData.intents)) {
+      if (!processData.success) {
         throw new Error(processData.error || 'Failed to process intent');
       }
 
-      console.log('[App] Intent processed:', JSON.stringify(processData.intent || processData.intents, null, 2));
+      console.log('[App] Raw process response:', JSON.stringify(processData, null, 2));
 
-      // Validate single intent has required fields
-      if (processData.intent && !processData.intent.intent) {
-        console.error('[App] Invalid intent from process API - missing intent field:', processData.intent);
+      // Determine if we have valid intents (single or multiple)
+      let validIntent: any = null;
+      let validIntents: any[] = [];
+
+      // Check multiple intents first
+      if (processData.intents && Array.isArray(processData.intents)) {
+        validIntents = processData.intents.filter((i: any) => i && typeof i === 'object' && i.intent);
+        if (validIntents.length > 0) {
+          validIntent = validIntents[0];
+        }
+      }
+
+      // Check single intent if no valid multiple intents
+      if (!validIntent && processData.intent && typeof processData.intent === 'object' && processData.intent.intent) {
+        validIntent = processData.intent;
+      }
+
+      // If still no valid intent, throw error
+      if (!validIntent) {
+        console.error('[App] No valid intent found in process response:', JSON.stringify(processData, null, 2));
         throw new Error('Invalid response from assistant - please try again');
       }
 
-      // Validate multiple intents have required fields
-      if (processData.intents) {
-        const invalidIntents = processData.intents.filter((i: any) => !i || !i.intent);
-        if (invalidIntents.length > 0) {
-          console.error('[App] Invalid intents from process API:', invalidIntents);
-        }
-        // Filter to only valid intents
-        processData.intents = processData.intents.filter((i: any) => i && i.intent);
-        if (processData.intents.length === 0) {
-          throw new Error('Invalid response from assistant - please try again');
-        }
-      }
+      console.log('[App] Valid intent:', validIntent.intent);
+
+      // Update processData with validated data
+      processData.intent = validIntent;
+      processData.intents = validIntents.length > 0 ? validIntents : undefined;
 
       // Determine the response text for TTS
       const responseText = processData.response || processData.intent?.response || '';
@@ -342,6 +352,7 @@ export default function VoicePage() {
           success: false,
           error: error.message,
         },
+        audioUrl: null, // Clear old audio to prevent replay
       }));
       setAppState('completed');
     }
