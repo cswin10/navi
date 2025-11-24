@@ -120,17 +120,20 @@ export default function VoicePage() {
 
       const processData = await processResponse.json();
 
-      if (!processData.success || !processData.intent) {
+      if (!processData.success || (!processData.intent && !processData.intents)) {
         throw new Error(processData.error || 'Failed to process intent');
       }
 
-      console.log('[App] Intent processed:', processData.intent);
+      console.log('[App] Intent processed:', processData.intent || processData.intents);
+
+      // Determine the response text for TTS
+      const responseText = processData.response || processData.intent?.response || '';
 
       // Generate voice response
       const speakResponse = await fetch('/api/speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: processData.intent.response }),
+        body: JSON.stringify({ text: responseText }),
       });
 
       const speakData = await speakResponse.json();
@@ -139,6 +142,32 @@ export default function VoicePage() {
         console.error('[App] TTS failed:', speakData.error);
       }
 
+      // Handle multiple intents
+      if (processData.intents && processData.intents.length > 0) {
+        // For multiple intents, use the first one as the primary intent
+        // Store all intents in state for batch execution
+        setActionState((prev) => ({
+          ...prev,
+          intent: processData.intents[0],
+          intents: processData.intents,
+          audioUrl: speakData.audioUrl || null,
+        }));
+
+        // Check if all intents require confirmation
+        const needsConfirmation = processData.intents.some(
+          (intent: any) => !['remember', 'get_weather', 'get_news', 'get_calendar_events', 'other'].includes(intent.intent)
+        );
+
+        if (needsConfirmation) {
+          setAppState('confirming');
+        } else {
+          // Auto-execute all intents
+          await handleConfirmMultiple(processData.intents);
+        }
+        return;
+      }
+
+      // Single intent handling
       setActionState((prev) => ({
         ...prev,
         intent: processData.intent,
@@ -183,6 +212,11 @@ export default function VoicePage() {
   };
 
   const handleConfirm = async (intentOverride?: ClaudeIntentResponse) => {
+    // Check if we have multiple intents
+    if (actionState.intents && actionState.intents.length > 1) {
+      return handleConfirmMultiple();
+    }
+
     const intent = intentOverride || actionState.intent;
 
     if (!intent || !sessionId) {
@@ -213,12 +247,15 @@ export default function VoicePage() {
       console.log('[App] Execution complete:', executeData.result);
 
       // Generate TTS for the execution result
-      if (executeData.result.response) {
+      // Use spokenResponse if available (brief), otherwise use response or displayResponse
+      const textToSpeak = executeData.result.spokenResponse || executeData.result.response || executeData.result.displayResponse;
+
+      if (textToSpeak) {
         try {
           const speakResponse = await fetch('/api/speak', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: executeData.result.response }),
+            body: JSON.stringify({ text: textToSpeak }),
           });
 
           const speakData = await speakResponse.json();
@@ -252,6 +289,128 @@ export default function VoicePage() {
       setAppState('completed');
     } catch (error: any) {
       console.error('[App] Execution error:', error);
+      setActionState((prev) => ({
+        ...prev,
+        error: error.message,
+        executionResult: {
+          success: false,
+          error: error.message,
+        },
+      }));
+      setAppState('completed');
+    }
+  };
+
+  const handleConfirmMultiple = async (intentsToExecute?: ClaudeIntentResponse[]) => {
+    const intents = intentsToExecute || actionState.intents;
+
+    if (!intents || intents.length === 0 || !sessionId) {
+      console.error('[App] Missing intents or session');
+      return;
+    }
+
+    console.log('[App] Executing multiple actions:', intents.length);
+    setAppState('executing');
+
+    try {
+      const results: ExecutionResult[] = [];
+      let allSuccessful = true;
+
+      // Execute each intent sequentially
+      for (const intent of intents) {
+        try {
+          const executeResponse = await fetch('/api/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              intent: intent,
+              sessionId,
+              transcript: actionState.transcript,
+            }),
+          });
+
+          const executeData = await executeResponse.json();
+
+          if (!executeData.success || !executeData.result) {
+            allSuccessful = false;
+            results.push({
+              success: false,
+              error: executeData.error || 'Failed to execute action',
+            });
+          } else {
+            results.push(executeData.result);
+          }
+        } catch (error: any) {
+          allSuccessful = false;
+          results.push({
+            success: false,
+            error: error.message,
+          });
+        }
+      }
+
+      console.log('[App] All executions complete. Successful:', allSuccessful);
+
+      // Combine results into a single execution result
+      const successfulCount = results.filter(r => r.success).length;
+      const combinedResult: ExecutionResult = {
+        success: allSuccessful,
+        displayResponse: results
+          .map((r, i) => {
+            const intentName = intents[i].intent;
+            if (r.success) {
+              return `✓ ${intentName}: ${r.displayResponse || r.response || 'Completed'}`;
+            } else {
+              return `✗ ${intentName}: ${r.error || 'Failed'}`;
+            }
+          })
+          .join('\n\n'),
+        spokenResponse: allSuccessful
+          ? `All ${successfulCount} actions completed.`
+          : `${successfulCount} of ${results.length} actions completed.`,
+      };
+
+      // Generate TTS for the combined result
+      const textToSpeak = combinedResult.spokenResponse;
+      if (textToSpeak) {
+        try {
+          const speakResponse = await fetch('/api/speak', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: textToSpeak }),
+          });
+
+          const speakData = await speakResponse.json();
+
+          if (speakData.success && speakData.audioUrl) {
+            setActionState((prev) => ({
+              ...prev,
+              executionResult: combinedResult,
+              audioUrl: speakData.audioUrl,
+            }));
+          } else {
+            setActionState((prev) => ({
+              ...prev,
+              executionResult: combinedResult,
+            }));
+          }
+        } catch (speakError) {
+          console.error('[App] TTS generation failed:', speakError);
+          setActionState((prev) => ({
+            ...prev,
+            executionResult: combinedResult,
+          }));
+        }
+      } else {
+        setActionState((prev) => ({
+          ...prev,
+          executionResult: combinedResult,
+        }));
+      }
+
+      setAppState('completed');
+    } catch (error: any) {
+      console.error('[App] Multi-execution error:', error);
       setActionState((prev) => ({
         ...prev,
         error: error.message,
@@ -387,6 +546,7 @@ export default function VoicePage() {
           {appState === 'confirming' && actionState.intent && (
             <ConfirmationPanel
               intent={actionState.intent}
+              intents={actionState.intents}
               audioUrl={actionState.audioUrl}
               onConfirm={handleConfirm}
               onCancel={handleCancel}

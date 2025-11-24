@@ -62,11 +62,17 @@ export interface CreateNoteParams {
 
 export type IntentParams = CreateTaskParams | SendEmailParams | RememberParams | GetWeatherParams | GetNewsParams | AddCalendarEventParams | GetCalendarEventsParams | TimeblockDayParams | CreateNoteParams | Record<string, unknown>;
 
-// Claude API Response
+// Claude API Response (single intent)
 export interface ClaudeIntentResponse {
   intent: IntentType;
   response: string;
   parameters: IntentParams;
+}
+
+// Claude API Response (multiple intents)
+export interface ClaudeMultiIntentResponse {
+  intents: ClaudeIntentResponse[];
+  response: string; // Combined response for all intents
 }
 
 // Transcription API Response
@@ -76,10 +82,12 @@ export interface TranscriptionResponse {
   error?: string;
 }
 
-// Process API Response
+// Process API Response (supports both single and multiple intents)
 export interface ProcessResponse {
   success: boolean;
-  intent?: ClaudeIntentResponse;
+  intent?: ClaudeIntentResponse; // Single intent
+  intents?: ClaudeIntentResponse[]; // Multiple intents
+  response?: string; // Combined response for multiple intents
   error?: string;
 }
 
@@ -96,7 +104,9 @@ export interface ExecutionResult {
   task_id?: string;
   notion_url?: string;
   message_id?: string;
-  response?: string;  // For conversational interactions
+  response?: string;  // Full response (shown on screen and spoken)
+  displayResponse?: string;  // Detailed response shown on screen only
+  spokenResponse?: string;  // Brief response for TTS only
   error?: string;
 }
 
@@ -132,6 +142,7 @@ export type AppState = 'idle' | 'recording' | 'transcribing' | 'processing' | 'c
 export interface ActionState {
   transcript: string;
   intent: ClaudeIntentResponse | null;
+  intents?: ClaudeIntentResponse[]; // For multiple intents
   audioUrl: string | null;
   executionResult: ExecutionResult | null;
   error: string | null;

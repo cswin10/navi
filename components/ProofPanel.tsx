@@ -79,9 +79,10 @@ export default function ProofPanel({ result, audioUrl, onNewAction }: ProofPanel
         {isSuccess && (
           <div className="space-y-3">
             {/* Generic response (calendar, weather, news, remember, etc.) */}
-            {result.response && (
+            {/* Use displayResponse for detailed info on screen, fall back to response */}
+            {(result.displayResponse || result.response) && (
               <div className="bg-black/30 rounded p-4">
-                <p className="text-gray-300 text-sm whitespace-pre-wrap">{result.response}</p>
+                <p className="text-gray-300 text-sm whitespace-pre-wrap">{result.displayResponse || result.response}</p>
               </div>
             )}
 
