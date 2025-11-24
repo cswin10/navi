@@ -224,6 +224,21 @@ export default function VoicePage() {
       return;
     }
 
+    // Validate intent has a proper type
+    if (!intent.intent) {
+      console.error('[App] Invalid intent - missing intent type:', intent);
+      setActionState((prev) => ({
+        ...prev,
+        error: 'Invalid intent received from assistant',
+        executionResult: {
+          success: false,
+          error: 'Invalid intent received from assistant',
+        },
+      }));
+      setAppState('completed');
+      return;
+    }
+
     console.log('[App] Executing action...');
     setAppState('executing');
 
@@ -323,8 +338,21 @@ export default function VoicePage() {
       const results: ExecutionResult[] = [];
       let allSuccessful = true;
 
+      // Filter out any invalid intents without a proper type
+      const validIntents = intents.filter(i => {
+        if (!i.intent) {
+          console.warn('[App] Skipping invalid intent without type:', i);
+          return false;
+        }
+        return true;
+      });
+
+      if (validIntents.length === 0) {
+        throw new Error('No valid intents to execute');
+      }
+
       // Execute each intent sequentially
-      for (const intent of intents) {
+      for (const intent of validIntents) {
         try {
           // Clean the intent to remove any non-serializable data
           const cleanIntent = {
