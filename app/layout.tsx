@@ -2,22 +2,21 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "NaviOS - Your AI Personal Assistant",
+  title: "Navi AI - Your AI Personal Assistant",
   description: "Speak naturally and watch things happen. Send emails, manage your calendar, create tasks, and get real time information about your day.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Navi",
+    title: "Navi AI",
   },
-  applicationName: "NaviOS",
+  applicationName: "Navi AI",
   icons: {
     icon: [
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/logo.svg", type: "image/svg+xml" },
     ],
     apple: [
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/logo.svg", type: "image/svg+xml" },
     ],
   },
 };

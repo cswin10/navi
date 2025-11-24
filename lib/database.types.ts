@@ -1,4 +1,4 @@
-// Database types for NaviOS
+// Database types for Navi AI
 // Generate with: npx supabase gen types typescript --project-id YOUR_PROJECT_ID
 
 export type Json =

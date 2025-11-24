@@ -14,7 +14,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-slate-800 py-8">
         <div className="container mx-auto px-4 text-center text-slate-400 text-sm">
-          <p>© 2025 NaviOS. Powered by OpenAI, Anthropic, and ElevenLabs.</p>
+          <p>© 2025 Navi AI. Powered by OpenAI, Anthropic, and ElevenLabs.</p>
         </div>
       </footer>
     </div>

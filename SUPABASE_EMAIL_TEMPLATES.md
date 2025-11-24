@@ -1,6 +1,6 @@
 # Supabase Email Template Customization
 
-This guide shows you how to customize the Supabase authentication emails with NaviOS branding.
+This guide shows you how to customize the Supabase authentication emails with Navi AI branding.
 
 ## Step 1: Access Email Templates
 
@@ -12,7 +12,7 @@ This guide shows you how to customize the Supabase authentication emails with Na
 
 ### Email Subject:
 ```
-Welcome to NaviOS - Confirm Your Email
+Welcome to Navi AI - Confirm Your Email
 ```
 
 ### Email Body (HTML):
@@ -33,7 +33,7 @@ Welcome to NaviOS - Confirm Your Email
           <tr>
             <td style="padding: 40px; text-align: center; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);">
               <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">
-                ✨ NaviOS
+                ✨ Navi AI
               </h1>
               <p style="margin: 8px 0 0 0; color: #e0e7ff; font-size: 16px;">
                 Your AI Personal Operating System
@@ -49,7 +49,7 @@ Welcome to NaviOS - Confirm Your Email
               </h2>
 
               <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.6;">
-                We're excited to have you join NaviOS! You're about to experience a completely new way of managing your life with AI.
+                We're excited to have you join Navi AI! You're about to experience a completely new way of managing your life with AI.
               </p>
 
               <p style="margin: 0 0 32px 0; font-size: 16px; line-height: 1.6;">
@@ -75,7 +75,7 @@ Welcome to NaviOS - Confirm Your Email
           <tr>
             <td style="padding: 32px; background-color: #0f172a; border-top: 1px solid #334155;">
               <p style="margin: 0 0 12px 0; color: #64748b; font-size: 14px; text-align: center; line-height: 1.6;">
-                What you can do with NaviOS:
+                What you can do with Navi AI:
               </p>
               <ul style="margin: 0; padding: 0; list-style: none; text-align: center; color: #94a3b8; font-size: 13px;">
                 <li style="margin: 8px 0;">📧 Send emails by voice</li>
@@ -104,7 +104,7 @@ If users use magic link login instead of password:
 
 ### Email Subject:
 ```
-Your NaviOS Magic Link 🔗
+Your Navi AI Magic Link 🔗
 ```
 
 ### Email Body (HTML):
@@ -125,7 +125,7 @@ Your NaviOS Magic Link 🔗
           <tr>
             <td style="padding: 40px; text-align: center; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);">
               <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700;">
-                ✨ NaviOS
+                ✨ Navi AI
               </h1>
             </td>
           </tr>
@@ -138,14 +138,14 @@ Your NaviOS Magic Link 🔗
               </h2>
 
               <p style="margin: 0 0 32px 0; font-size: 16px; line-height: 1.6;">
-                Click the button below to sign in to your NaviOS account:
+                Click the button below to sign in to your Navi AI account:
               </p>
 
               <!-- CTA Button -->
               <div style="text-align: center; margin: 32px 0;">
                 <a href="{{ .ConfirmationURL }}"
                    style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                  Sign In to NaviOS
+                  Sign In to Navi AI
                 </a>
               </div>
 
@@ -160,7 +160,7 @@ Your NaviOS Magic Link 🔗
           <tr>
             <td style="padding: 32px; background-color: #0f172a; border-top: 1px solid #334155; text-align: center;">
               <p style="margin: 0; color: #64748b; font-size: 12px;">
-                © 2024 NaviOS. All rights reserved.
+                © 2024 Navi AI. All rights reserved.
               </p>
             </td>
           </tr>

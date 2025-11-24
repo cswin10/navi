@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Create a task in NaviOS database
+ * Create a task in Navi AI database
  */
 async function executeCreateTask(userId: string, params: CreateTaskParams): Promise<ExecutionResult> {
   try {
@@ -665,7 +665,7 @@ async function executeTimeblockDay(userId: string, params: TimeblockDayParams): 
 }
 
 /**
- * Create a note in NaviOS database
+ * Create a note in Navi AI database
  */
 async function executeCreateNote(userId: string, params: CreateNoteParams): Promise<ExecutionResult> {
   try {
