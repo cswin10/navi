@@ -1,5 +1,5 @@
 // Core intent types
-export type IntentType = 'create_task' | 'send_email' | 'remember' | 'get_weather' | 'get_news' | 'add_calendar_event' | 'get_calendar_events' | 'timeblock_day' | 'other';
+export type IntentType = 'create_task' | 'send_email' | 'remember' | 'get_weather' | 'get_news' | 'add_calendar_event' | 'get_calendar_events' | 'timeblock_day' | 'create_note' | 'other';
 
 export type Priority = 'high' | 'medium' | 'low';
 
@@ -54,7 +54,13 @@ export interface TimeblockDayParams {
   }>;
 }
 
-export type IntentParams = CreateTaskParams | SendEmailParams | RememberParams | GetWeatherParams | GetNewsParams | AddCalendarEventParams | GetCalendarEventsParams | TimeblockDayParams | Record<string, unknown>;
+export interface CreateNoteParams {
+  title: string;
+  content: string;
+  folder?: string; // Optional folder name
+}
+
+export type IntentParams = CreateTaskParams | SendEmailParams | RememberParams | GetWeatherParams | GetNewsParams | AddCalendarEventParams | GetCalendarEventsParams | TimeblockDayParams | CreateNoteParams | Record<string, unknown>;
 
 // Claude API Response
 export interface ClaudeIntentResponse {

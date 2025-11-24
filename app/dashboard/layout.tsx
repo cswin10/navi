@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 const navigation = [
   { name: 'Home', href: '/dashboard', icon: Home },
   { name: 'Tasks', href: '/dashboard/tasks', icon: CheckSquare },
+  { name: 'Notes', href: '/dashboard/notes', icon: FileText },
   { name: 'Profile', href: '/dashboard/profile', icon: User },
   { name: 'Integrations', href: '/dashboard/integrations', icon: Plug },
 ]
