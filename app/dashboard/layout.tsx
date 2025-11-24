@@ -64,7 +64,7 @@ export default function DashboardLayout({
           {/* Logo */}
           <div className="p-6 border-b border-slate-800">
             <Link href="/dashboard" className="flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-blue-400" />
+              <img src="/logo.svg" alt="Navi AI" className="w-8 h-8" />
               <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 Navi AI
               </span>
