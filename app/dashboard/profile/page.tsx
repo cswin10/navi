@@ -25,10 +25,7 @@ export default function ProfilePage() {
 
   // Form state
   const [name, setName] = useState('')
-  const [contextMemory, setContextMemory] = useState<Record<string, string>>({})
   const [knowledgeBase, setKnowledgeBase] = useState('')
-  const [newKey, setNewKey] = useState('')
-  const [newValue, setNewValue] = useState('')
 
   useEffect(() => {
     loadProfile()
@@ -52,7 +49,6 @@ export default function ProfilePage() {
     if (data) {
       setProfile(data)
       setName(data.name || '')
-      setContextMemory(data.context_memory || {})
       setKnowledgeBase(data.knowledge_base || '')
     }
 
@@ -70,7 +66,6 @@ export default function ProfilePage() {
         .from('user_profiles') as any)
         .update({
           name,
-          context_memory: contextMemory,
           knowledge_base: knowledgeBase,
           updated_at: new Date().toISOString(),
         })
@@ -89,23 +84,6 @@ export default function ProfilePage() {
     }
   }
 
-  function handleAddContext() {
-    if (!newKey.trim() || !newValue.trim()) return
-
-    setContextMemory({
-      ...contextMemory,
-      [newKey]: newValue,
-    })
-    setNewKey('')
-    setNewValue('')
-  }
-
-  function handleRemoveContext(key: string) {
-    const updated = { ...contextMemory }
-    delete updated[key]
-    setContextMemory(updated)
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -119,7 +97,7 @@ export default function ProfilePage() {
       {/* Header */}
       <div>
         <h1 className="text-4xl font-bold text-white mb-2">Profile</h1>
-        <p className="text-slate-400">Manage your account settings and preferences</p>
+        <p className="text-slate-400">Teach Navi about yourself for personalized assistance</p>
       </div>
 
       {/* Basic Information */}
@@ -155,7 +133,7 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* Context Memory */}
+      {/* What Navi Should Know */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -163,139 +141,97 @@ export default function ProfilePage() {
               <Brain className="w-5 h-5 text-purple-400" />
             </div>
             <div>
-              <CardTitle>Context Memory</CardTitle>
+              <CardTitle>What Navi Should Know About You</CardTitle>
               <CardDescription>
-                Teach Navi about yourself so it can provide personalized assistance
+                Add any information you want Navi to remember. The more she knows, the better she can help!
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* How to add information */}
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 text-sm text-slate-300">
-            <p className="font-medium text-white mb-1">What is Context Memory?</p>
-            <p>
-              Context Memory helps Navi remember important details about you, like your location,
-              work schedule, preferences, or frequently contacted people. This allows Navi to provide
-              more relevant and personalized responses.
-            </p>
-            <p className="mt-2">
-              <strong>Examples:</strong> timezone → Europe/London, work_hours → 9am-5pm,
-              manager_email → boss@company.com
-            </p>
-          </div>
-
-          {/* Existing Context */}
-          {Object.keys(contextMemory).length > 0 && (
+            <p className="font-medium text-white mb-2">Two ways to teach Navi:</p>
             <div className="space-y-2">
-              <h4 className="text-sm font-medium text-slate-300">Current Context:</h4>
-              {Object.entries(contextMemory).map(([key, value]) => (
-                <div
-                  key={key}
-                  className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700"
-                >
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-400">{key}</p>
-                    <p className="text-sm text-slate-300 mt-0.5">{value}</p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveContext(key)}
-                    className="text-slate-400 hover:text-red-400"
-                  >
-                    Remove
-                  </Button>
+              <div className="flex items-start gap-2">
+                <span className="text-blue-400 font-bold">1.</span>
+                <div>
+                  <p className="font-medium text-white">Type it here</p>
+                  <p className="text-slate-400">Write or paste any information in the box below</p>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {/* Add New Context */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium text-slate-300">Add New Context:</h4>
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                label="Key"
-                value={newKey}
-                onChange={(e) => setNewKey(e.target.value)}
-                placeholder="e.g. timezone"
-              />
-              <Input
-                label="Value"
-                value={newValue}
-                onChange={(e) => setNewValue(e.target.value)}
-                placeholder="e.g. Europe/London"
-              />
-            </div>
-            <Button
-              variant="secondary"
-              onClick={handleAddContext}
-              disabled={!newKey.trim() || !newValue.trim()}
-            >
-              Add Context
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Knowledge Base */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-green-400" />
-            </div>
-            <div>
-              <CardTitle>Knowledge Base</CardTitle>
-              <CardDescription>
-                Paste important information for Navi to remember - contacts, preferences, schedules, anything!
-              </CardDescription>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-blue-400 font-bold">2.</span>
+                <div>
+                  <p className="font-medium text-white">Tell Navi directly</p>
+                  <p className="text-slate-400">Say "Remember that..." and she'll add it automatically</p>
+                </div>
+              </div>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 text-sm text-slate-300">
-            <p className="font-medium text-white mb-1">How it works:</p>
-            <ul className="list-disc list-inside space-y-1 ml-2">
-              <li>Paste any information you want Navi to know (contacts, projects, preferences)</li>
-              <li>Navi will have access to this during all conversations</li>
-              <li>You can also say "Remember that..." and Navi will add to this automatically</li>
-              <li>This is like giving Navi your personal handbook</li>
-            </ul>
+
+          {/* Examples of what to include */}
+          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 text-sm">
+            <p className="font-medium text-white mb-2">What to include:</p>
+            <div className="grid grid-cols-2 gap-3 text-slate-300">
+              <div>
+                <p className="text-green-400 font-medium mb-1">👥 People</p>
+                <p className="text-xs">Contacts, family, colleagues</p>
+              </div>
+              <div>
+                <p className="text-green-400 font-medium mb-1">📍 Location</p>
+                <p className="text-xs">Where you're based, timezone</p>
+              </div>
+              <div>
+                <p className="text-green-400 font-medium mb-1">📅 Schedule</p>
+                <p className="text-xs">Work hours, recurring meetings</p>
+              </div>
+              <div>
+                <p className="text-green-400 font-medium mb-1">💼 Projects</p>
+                <p className="text-xs">Current work, deadlines</p>
+              </div>
+              <div>
+                <p className="text-green-400 font-medium mb-1">⚙️ Preferences</p>
+                <p className="text-xs">How you like things done</p>
+              </div>
+              <div>
+                <p className="text-green-400 font-medium mb-1">🎯 Goals</p>
+                <p className="text-xs">What you're working towards</p>
+              </div>
+            </div>
           </div>
 
+          {/* Text area */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Your Knowledge Base
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-slate-300">
+                Your Information
+              </label>
+              <span className="text-xs text-slate-500">
+                {knowledgeBase.length} characters
+              </span>
+            </div>
             <textarea
               value={knowledgeBase}
               onChange={(e) => setKnowledgeBase(e.target.value)}
-              placeholder="Example:
+              placeholder="Write anything Navi should know about you. Examples:
 
-Important Contacts:
-- John Smith (Manager): john@company.com, +44 7700 900123
-- Sarah Johnson (Client): sarah@client.com
+I'm based in London and work 9am-5pm GMT.
 
-My Schedule:
-- Team standup: Every Monday 10am
-- Work hours: 9am-5pm GMT
-- Lunch break: 1-2pm
+My manager is Sarah (sarah@company.com). Always CC her on important client emails.
 
-Current Projects:
-- Website Redesign (deadline: March 15, 2025)
-- Q1 Marketing Campaign
-- Product Launch Preparation
+I have a team standup every Monday at 10am.
 
-Preferences:
-- I prefer morning meetings before 11am
-- I'm based in London
-- Always CC my manager on client emails"
-              rows={15}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-sm"
+Current projects:
+- Website redesign (deadline: March 15)
+- Q1 marketing campaign
+
+I prefer morning meetings and don't schedule anything during lunch (1-2pm)."
+              rows={12}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
             />
-            <p className="text-xs text-slate-500 mt-2">
-              {knowledgeBase.length} characters · Navi will always have access to this information
+            <p className="text-xs text-slate-400 mt-2 italic">
+              💡 Tip: The more you tell Navi, the more helpful she becomes!
             </p>
           </div>
         </CardContent>
