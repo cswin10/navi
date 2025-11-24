@@ -43,6 +43,13 @@ export default function ProofPanel({ result, onNewAction }: ProofPanelProps) {
         {/* Success details */}
         {isSuccess && (
           <div className="space-y-3">
+            {/* Generic response (calendar, weather, news, remember, etc.) */}
+            {result.response && (
+              <div className="bg-black/30 rounded p-4">
+                <p className="text-gray-300 text-sm whitespace-pre-wrap">{result.response}</p>
+              </div>
+            )}
+
             {/* Task created */}
             {result.task_id && result.notion_url && (
               <div className="bg-black/30 rounded p-4">
