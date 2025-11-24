@@ -65,36 +65,36 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4 py-8">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <Link href="/" className="flex items-center justify-center gap-2 mb-8">
-          <Sparkles className="w-8 h-8 text-blue-400" />
-          <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+        <Link href="/" className="flex items-center justify-center gap-2 mb-6 sm:mb-8">
+          <Sparkles className="w-7 h-7 sm:w-8 sm:h-8 text-blue-400" />
+          <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
             Navi AI
           </span>
         </Link>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Create your account</CardTitle>
-            <CardDescription>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-lg sm:text-xl">Create your account</CardTitle>
+            <CardDescription className="text-sm">
               Get started with your personal AI operating system
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0">
             {success ? (
-              <div className="space-y-4">
-                <div className="bg-green-500/10 border border-green-500/50 rounded-lg p-4">
-                  <h3 className="text-green-400 font-medium mb-2">Check your email!</h3>
-                  <p className="text-slate-300 text-sm">
+              <div className="space-y-3 sm:space-y-4">
+                <div className="bg-green-500/10 border border-green-500/50 rounded-lg p-3 sm:p-4">
+                  <h3 className="text-green-400 font-medium text-sm sm:text-base mb-2">Check your email!</h3>
+                  <p className="text-slate-300 text-xs sm:text-sm">
                     We've sent a confirmation email to <strong>{email}</strong>
                   </p>
-                  <p className="text-slate-400 text-sm mt-2">
+                  <p className="text-slate-400 text-xs sm:text-sm mt-2">
                     Click the link in the email to verify your account and get started.
                   </p>
                 </div>
-                <p className="text-center text-sm text-slate-400">
+                <p className="text-center text-xs sm:text-sm text-slate-400">
                   Didn't receive the email? Check your spam folder or{' '}
                   <button
                     onClick={() => setSuccess(false)}
@@ -105,9 +105,9 @@ export default function SignUpPage() {
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleSignUp} className="space-y-4">
+              <form onSubmit={handleSignUp} className="space-y-3 sm:space-y-4">
                 {error && (
-                  <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 text-sm text-red-400">
+                  <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-2.5 sm:p-3 text-xs sm:text-sm text-red-400">
                     {error}
                   </div>
                 )}
@@ -132,7 +132,7 @@ export default function SignUpPage() {
                 <Input
                   label="Password"
                   type="password"
-                  placeholder="Create a strong password (min. 6 characters)"
+                  placeholder="Min. 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -149,14 +149,14 @@ export default function SignUpPage() {
 
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full text-sm sm:text-base"
                   isLoading={loading}
                   disabled={loading}
                 >
                   Create Account
                 </Button>
 
-                <p className="text-center text-sm text-slate-400">
+                <p className="text-center text-xs sm:text-sm text-slate-400">
                   Already have an account?{' '}
                   <Link href="/login" className="text-blue-400 hover:text-blue-300">
                     Sign in
@@ -167,7 +167,7 @@ export default function SignUpPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-slate-500 mt-4">
+        <p className="text-center text-[10px] sm:text-xs text-slate-500 mt-3 sm:mt-4 px-4">
           By signing up, you agree to our Terms of Service and Privacy Policy
         </p>
       </div>

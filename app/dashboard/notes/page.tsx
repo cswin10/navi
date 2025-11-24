@@ -210,36 +210,52 @@ export default function NotesPage() {
   const folders = getFolders()
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-4xl font-bold text-white mb-2">Notes</h1>
-          <p className="text-slate-400">Capture your thoughts and ideas</p>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-1 sm:mb-2">Notes</h1>
+          <p className="text-sm sm:text-base text-slate-400">Capture your thoughts and ideas</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
+        <Button onClick={() => setShowCreateModal(true)} className="w-full sm:w-auto text-sm">
           <Plus className="w-4 h-4 mr-2" />
           New Note
         </Button>
       </div>
 
       {/* Search and Filters */}
-      <div className="flex gap-4">
+      <div className="flex gap-2 sm:gap-4">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search notes..."
-            className="pl-10"
+            className="pl-9 sm:pl-10 text-sm"
           />
         </div>
       </div>
 
+      {/* Mobile Folder Selector */}
+      <div className="lg:hidden">
+        <select
+          value={selectedFolder}
+          onChange={(e) => setSelectedFolder(e.target.value)}
+          className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="all">All Notes ({notes.length})</option>
+          {folders.map((folder) => (
+            <option key={folder} value={folder}>
+              {folder} ({notes.filter(n => n.folder === folder).length})
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* Folders and Notes */}
-      <div className="grid grid-cols-12 gap-6">
-        {/* Folders Sidebar */}
-        <div className="col-span-3">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+        {/* Folders Sidebar - Hidden on mobile */}
+        <div className="hidden lg:block lg:col-span-3">
           <Card>
             <CardContent className="pt-6">
               <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-4">Folders</h3>
@@ -280,52 +296,52 @@ export default function NotesPage() {
         </div>
 
         {/* Notes Grid */}
-        <div className="col-span-9">
+        <div className="lg:col-span-9">
           {filteredNotes.length === 0 ? (
             <Card>
-              <CardContent className="py-12 text-center">
-                <FileText className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                <p className="text-slate-400">
+              <CardContent className="py-8 sm:py-12 text-center">
+                <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-slate-600 mx-auto mb-3 sm:mb-4" />
+                <p className="text-sm sm:text-base text-slate-400">
                   {searchQuery ? 'No notes match your search' : 'No notes yet. Create one to get started!'}
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {filteredNotes.map((note) => (
                 <Card key={note.id} className="hover:border-blue-500/50 transition-colors">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start justify-between mb-3">
+                  <CardContent className="p-4 sm:pt-6">
+                    <div className="flex items-start justify-between mb-2 sm:mb-3">
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-semibold text-white mb-1 truncate">
+                        <h3 className="text-base sm:text-lg font-semibold text-white mb-1 truncate">
                           {note.title}
                         </h3>
                         {note.folder && (
-                          <div className="flex items-center gap-1 text-xs text-slate-400">
-                            <Folder className="w-3 h-3" />
+                          <div className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-400">
+                            <Folder className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                             <span>{note.folder}</span>
                           </div>
                         )}
                       </div>
-                      <div className="flex gap-2 ml-2">
+                      <div className="flex gap-1.5 sm:gap-2 ml-2">
                         <button
                           onClick={() => openEditModal(note)}
-                          className="text-slate-400 hover:text-blue-400 transition-colors"
+                          className="text-slate-400 hover:text-blue-400 active:text-blue-500 transition-colors p-1"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteNote(note.id)}
-                          className="text-slate-400 hover:text-red-400 transition-colors"
+                          className="text-slate-400 hover:text-red-400 active:text-red-500 transition-colors p-1"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
-                    <p className="text-slate-300 text-sm line-clamp-3 mb-3">
+                    <p className="text-slate-300 text-xs sm:text-sm line-clamp-3 mb-2 sm:mb-3">
                       {note.content}
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-[10px] sm:text-xs text-slate-500">
                       {new Date(note.created_at).toLocaleDateString()}
                     </p>
                   </CardContent>
@@ -338,21 +354,21 @@ export default function NotesPage() {
 
       {/* Create/Edit Modal */}
       {(showCreateModal || editingNote) && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-slate-800 rounded-lg w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-slate-800 border-b border-slate-700 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+              <h2 className="text-lg sm:text-xl font-semibold text-white">
                 {editingNote ? 'Edit Note' : 'Create Note'}
               </h2>
               <button
                 onClick={closeModal}
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-slate-400 hover:text-white active:text-slate-200 transition-colors p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   Title

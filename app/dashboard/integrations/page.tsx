@@ -186,11 +186,11 @@ function IntegrationsContent() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-4xl font-bold text-white mb-2">Integrations</h1>
-        <p className="text-slate-400">Connect your accounts to enable more capabilities</p>
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-1 sm:mb-2">Integrations</h1>
+        <p className="text-sm sm:text-base text-slate-400">Connect your accounts to enable more capabilities</p>
       </div>
 
       {/* Success Message */}
@@ -348,7 +348,7 @@ function IntegrationsContent() {
       </Card>
 
       {/* Future Integrations */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-50">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 opacity-50">
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">

@@ -63,7 +63,7 @@ export default function LoginPage() {
   if (checkingSession) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-        <p className="text-slate-400">Loading...</p>
+        <p className="text-slate-400 text-sm sm:text-base">Loading...</p>
       </div>
     )
   }
@@ -72,24 +72,24 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <Link href="/" className="flex items-center justify-center gap-2 mb-8">
-          <Sparkles className="w-8 h-8 text-blue-400" />
-          <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+        <Link href="/" className="flex items-center justify-center gap-2 mb-6 sm:mb-8">
+          <Sparkles className="w-7 h-7 sm:w-8 sm:h-8 text-blue-400" />
+          <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
             Navi AI
           </span>
         </Link>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Welcome back</CardTitle>
-            <CardDescription>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-lg sm:text-xl">Welcome back</CardTitle>
+            <CardDescription className="text-sm">
               Sign in to access your personal AI operating system
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
+          <CardContent className="p-4 sm:p-6 pt-0">
+            <form onSubmit={handleLogin} className="space-y-3 sm:space-y-4">
               {error && (
-                <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 text-sm text-red-400">
+                <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-2.5 sm:p-3 text-xs sm:text-sm text-red-400">
                   {error}
                 </div>
               )}
@@ -114,14 +114,14 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full text-sm sm:text-base"
                 isLoading={loading}
                 disabled={loading}
               >
                 Sign In
               </Button>
 
-              <p className="text-center text-sm text-slate-400">
+              <p className="text-center text-xs sm:text-sm text-slate-400">
                 Don't have an account?{' '}
                 <Link href="/signup" className="text-blue-400 hover:text-blue-300">
                   Sign up
