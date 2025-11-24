@@ -14,6 +14,7 @@ interface UserProfile {
   email: string | null
   context_memory: Record<string, string>
   knowledge_base: string
+  email_signature: string
   created_at: string
 }
 
@@ -26,6 +27,7 @@ export default function ProfilePage() {
   // Form state
   const [name, setName] = useState('')
   const [knowledgeBase, setKnowledgeBase] = useState('')
+  const [emailSignature, setEmailSignature] = useState('')
 
   useEffect(() => {
     loadProfile()
@@ -50,6 +52,7 @@ export default function ProfilePage() {
       setProfile(data)
       setName(data.name || '')
       setKnowledgeBase(data.knowledge_base || '')
+      setEmailSignature(data.email_signature || '')
     }
 
     setLoading(false)
@@ -67,6 +70,7 @@ export default function ProfilePage() {
         .update({
           name,
           knowledge_base: knowledgeBase,
+          email_signature: emailSignature,
           updated_at: new Date().toISOString(),
         })
         .eq('id', profile.id)
@@ -232,6 +236,52 @@ I prefer morning meetings and don't schedule anything during lunch (1-2pm)."
             />
             <p className="text-xs text-slate-400 mt-2 italic">
               💡 Tip: The more you tell Navi, the more helpful she becomes!
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Email Signature */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+              <span className="text-2xl">✍️</span>
+            </div>
+            <div>
+              <CardTitle>Email Signature</CardTitle>
+              <CardDescription>
+                Add a signature to emails sent by Navi (optional)
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 text-sm text-slate-300">
+            <p className="font-medium text-white mb-1">How it works:</p>
+            <p>When Navi sends emails on your behalf, this signature will be automatically added at the end.</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Your Signature
+            </label>
+            <textarea
+              value={emailSignature}
+              onChange={(e) => setEmailSignature(e.target.value)}
+              placeholder="Example:
+
+Best regards,
+John Smith
+Senior Product Manager
+Company Name
+john@company.com
++44 7700 900123"
+              rows={6}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            />
+            <p className="text-xs text-slate-400 mt-2">
+              This will be added to the end of every email Navi sends for you
             </p>
           </div>
         </CardContent>

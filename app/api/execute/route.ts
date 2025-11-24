@@ -4,6 +4,7 @@ import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParam
 import { getCurrentUser, createClient } from '@/lib/auth';
 import { decrypt } from '@/lib/encryption';
 import { getGoogleCalendarToken, parseTimeToISO } from '@/lib/google-calendar';
+import { generateEmailHTML, generateEmailText } from '@/lib/email-template';
 import type { Database } from '@/lib/database.types';
 
 export async function POST(request: NextRequest) {
@@ -185,6 +186,15 @@ async function executeSendEmail(userId: string, params: SendEmailParams): Promis
       throw new Error('No email account connected. Please connect your email in Settings → Integrations.');
     }
 
+    // Get user's email signature from profile
+    const { data: profile } = await (supabase
+      .from('user_profiles') as any)
+      .select('email_signature')
+      .eq('id', userId)
+      .single();
+
+    const emailSignature = profile?.email_signature || '';
+
     // Decrypt credentials
     const credentials = integration.credentials as { email: string; app_password: string };
     const decryptedPassword = decrypt(credentials.app_password);
@@ -198,12 +208,17 @@ async function executeSendEmail(userId: string, params: SendEmailParams): Promis
       },
     });
 
-    // Send email
+    // Generate HTML and plain text versions
+    const htmlBody = generateEmailHTML(params.body, emailSignature);
+    const textBody = generateEmailText(params.body, emailSignature);
+
+    // Send email with HTML and plain text versions
     const info = await transporter.sendMail({
       from: credentials.email,
       to: params.to,
       subject: params.subject,
-      text: params.body,
+      text: textBody,
+      html: htmlBody,
     });
 
     console.log('[Execute] Email sent:', info.messageId);
