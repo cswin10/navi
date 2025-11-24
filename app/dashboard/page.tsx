@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase-browser'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { CheckSquare, Clock, CheckCircle2, Mic, ArrowRight } from 'lucide-react'
+import { CheckSquare, Clock, CheckCircle2, Mic, ArrowRight, FileText, Folder } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 interface DashboardStats {
@@ -27,6 +27,14 @@ interface Task {
   created_at: string
 }
 
+interface Note {
+  id: string
+  title: string
+  content: string
+  folder: string
+  created_at: string
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [stats, setStats] = useState<DashboardStats>({
@@ -37,6 +45,7 @@ export default function DashboardPage() {
     todayTasks: 0,
   })
   const [recentTasks, setRecentTasks] = useState<Task[]>([])
+  const [recentNotes, setRecentNotes] = useState<Note[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -68,6 +77,18 @@ export default function DashboardPage() {
         })
 
         setRecentTasks(tasks.slice(0, 5))
+      }
+
+      // Load notes
+      const { data: notes } = await (supabase
+        .from('notes') as any)
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      if (notes) {
+        setRecentNotes(notes)
       }
 
       setLoading(false)
@@ -211,6 +232,64 @@ export default function DashboardPage() {
                     )}
                   </div>
                 </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Recent Notes */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Recent Notes</CardTitle>
+            <Link href="/dashboard/notes">
+              <Button variant="ghost" size="sm">
+                View All
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="text-slate-400">Loading...</p>
+          ) : recentNotes.length === 0 ? (
+            <div className="text-center py-8">
+              <FileText className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+              <p className="text-slate-400 mb-4">No notes yet!</p>
+              <Link href="/voice">
+                <Button>
+                  <Mic className="w-4 h-4 mr-2" />
+                  Create your first note
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentNotes.map((note) => (
+                <Link key={note.id} href="/dashboard/notes">
+                  <div className="flex items-start gap-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700 hover:border-blue-500/50 transition-colors cursor-pointer">
+                    <FileText className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-white font-medium truncate">{note.title}</h3>
+                        {note.folder && (
+                          <div className="flex items-center gap-1 text-xs text-slate-400">
+                            <Folder className="w-3 h-3" />
+                            <span>{note.folder}</span>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-sm text-slate-400 mt-1 line-clamp-2">
+                        {note.content}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {new Date(note.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </Link>
               ))}
             </div>
           )}
