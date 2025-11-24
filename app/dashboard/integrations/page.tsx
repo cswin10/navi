@@ -1,8 +1,6 @@
 'use client'
 
-export const dynamic = 'force-dynamic'
-
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
@@ -22,7 +20,7 @@ interface Integration {
   }
 }
 
-export default function IntegrationsPage() {
+function IntegrationsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState(true)
@@ -443,5 +441,17 @@ export default function IntegrationsPage() {
         </div>
       </Modal>
     </div>
+  )
+}
+
+export default function IntegrationsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-64">
+        <p className="text-slate-400">Loading integrations...</p>
+      </div>
+    }>
+      <IntegrationsContent />
+    </Suspense>
   )
 }
