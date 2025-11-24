@@ -29,10 +29,14 @@ export function Hero() {
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.5 }}
-            className="flex items-center justify-center gap-3 mb-6"
+            className="flex items-center justify-center gap-4 mb-6"
           >
-            <Sparkles className="w-12 h-12 text-blue-400" />
-            <h1 className="text-6xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            <img
+              src="/logo.svg"
+              alt="Navi AI Logo"
+              className="w-16 h-16 md:w-20 md:h-20"
+            />
+            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               Navi AI
             </h1>
           </motion.div>

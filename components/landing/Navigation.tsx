@@ -11,7 +11,11 @@ export function Navigation() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-blue-400" />
+            <img
+              src="/logo.svg"
+              alt="Navi AI"
+              className="w-8 h-8"
+            />
             <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               Navi AI
             </span>
