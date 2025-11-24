@@ -76,12 +76,34 @@ export default function ConfirmationPanel({
         <div className="bg-black/30 rounded p-4 mb-6">
           <p className="text-sm text-gray-400 mb-2">Details:</p>
           <div className="space-y-1">
-            {Object.entries(intent.parameters).map(([key, value]) => (
-              <div key={key} className="flex gap-2 text-sm">
-                <span className="text-gray-500 capitalize">{key.replace(/_/g, ' ')}:</span>
-                <span className="text-gray-300">{value?.toString() || 'N/A'}</span>
-              </div>
-            ))}
+            {Object.entries(intent.parameters).map(([key, value]) => {
+              // Format value based on type
+              let displayValue: string;
+
+              if (Array.isArray(value)) {
+                // Handle arrays (like timeblock blocks)
+                if (key === 'blocks' && value.length > 0) {
+                  displayValue = value.map((block: any) =>
+                    `${block.start_time}-${block.end_time}: ${block.title}`
+                  ).join('\n');
+                } else {
+                  displayValue = value.join(', ');
+                }
+              } else if (typeof value === 'object' && value !== null) {
+                // Handle objects
+                displayValue = JSON.stringify(value, null, 2);
+              } else {
+                // Handle primitives
+                displayValue = value?.toString() || 'N/A';
+              }
+
+              return (
+                <div key={key} className="flex gap-2 text-sm">
+                  <span className="text-gray-500 capitalize">{key.replace(/_/g, ' ')}:</span>
+                  <span className="text-gray-300 whitespace-pre-wrap">{displayValue}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 

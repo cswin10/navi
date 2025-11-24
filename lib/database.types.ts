@@ -20,6 +20,7 @@ export interface Database {
           preferences: Json
           context_memory: Json
           knowledge_base: string
+          email_signature: string
           created_at: string
           updated_at: string
         }
@@ -30,6 +31,7 @@ export interface Database {
           preferences?: Json
           context_memory?: Json
           knowledge_base?: string
+          email_signature?: string
           created_at?: string
           updated_at?: string
         }
@@ -40,6 +42,7 @@ export interface Database {
           preferences?: Json
           context_memory?: Json
           knowledge_base?: string
+          email_signature?: string
           created_at?: string
           updated_at?: string
         }

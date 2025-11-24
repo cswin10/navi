@@ -409,6 +409,7 @@ export default function VoicePage() {
           {appState === 'completed' && actionState.executionResult && (
             <ProofPanel
               result={actionState.executionResult}
+              audioUrl={actionState.audioUrl}
               onNewAction={handleNewAction}
             />
           )}
