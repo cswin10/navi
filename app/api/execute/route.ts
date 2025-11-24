@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, SendEmailParams, RememberParams, GetWeatherParams, GetNewsParams, AddCalendarEventParams, GetCalendarEventsParams, TimeblockDayParams } from '@/lib/types';
+import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, SendEmailParams, RememberParams, GetWeatherParams, GetNewsParams, AddCalendarEventParams, GetCalendarEventsParams, TimeblockDayParams, CreateNoteParams } from '@/lib/types';
 import { getCurrentUser, createClient } from '@/lib/auth';
 import { decrypt } from '@/lib/encryption';
 import { getGoogleCalendarToken, parseTimeToISO } from '@/lib/google-calendar';
@@ -90,6 +90,10 @@ export async function POST(request: NextRequest) {
 
       case 'timeblock_day':
         result = await executeTimeblockDay(user.id, intent.parameters as TimeblockDayParams);
+        break;
+
+      case 'create_note':
+        result = await executeCreateNote(user.id, intent.parameters as CreateNoteParams);
         break;
 
       default:
@@ -656,6 +660,46 @@ async function executeTimeblockDay(userId: string, params: TimeblockDayParams): 
     return {
       success: false,
       error: error.message || 'Failed to create time blocks',
+    };
+  }
+}
+
+/**
+ * Create a note in NaviOS database
+ */
+async function executeCreateNote(userId: string, params: CreateNoteParams): Promise<ExecutionResult> {
+  try {
+    console.log('[Execute] Creating note:', params);
+
+    const supabase = await createClient();
+
+    const { data, error } = await (supabase
+      .from('notes') as any)
+      .insert({
+        user_id: userId,
+        title: params.title,
+        content: params.content,
+        folder: params.folder || '',
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    console.log('[Execute] Note created:', data.id);
+
+    const folderText = params.folder ? ` in your ${params.folder} folder` : '';
+    return {
+      success: true,
+      response: `Note "${params.title}" created${folderText}`,
+    };
+  } catch (error: any) {
+    console.error('[Execute] Note creation failed:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to create note',
     };
   }
 }
