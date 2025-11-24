@@ -239,24 +239,34 @@ export async function POST(request: NextRequest) {
 
       // Check if it's multiple intents or single intent
       if (parsed.intents && Array.isArray(parsed.intents)) {
-        // Multiple intents
-        console.log('[Process API] Parsed multiple intents:', parsed.intents.length);
+        // Multiple intents - validate each has an intent type
+        const validIntents = parsed.intents.filter((i: any) => i && i.intent);
+        if (validIntents.length === 0) {
+          console.error('[Process API] No valid intents found in array:', parsed.intents);
+          throw new Error('No valid intents found in Claude response');
+        }
+        console.log('[Process API] Parsed multiple intents:', validIntents.length);
         return NextResponse.json<ProcessResponse>({
           success: true,
-          intents: parsed.intents,
+          intents: validIntents,
           response: parsed.response,
         });
       } else {
-        // Single intent
+        // Single intent - validate it has an intent type
+        if (!parsed.intent) {
+          console.error('[Process API] Parsed response missing intent field:', parsed);
+          throw new Error('Claude response missing intent type');
+        }
         console.log('[Process API] Parsed single intent:', parsed.intent);
         return NextResponse.json<ProcessResponse>({
           success: true,
           intent: parsed as ClaudeIntentResponse,
         });
       }
-    } catch (parseError) {
+    } catch (parseError: any) {
       console.error('[Process API] Failed to parse Claude response:', parseError);
-      throw new Error('Failed to parse intent from Claude response');
+      console.error('[Process API] Raw response text:', contentBlock.text);
+      throw new Error(`Failed to parse intent from Claude response: ${parseError.message}`);
     }
   } catch (error: any) {
     console.error('[Process API] Error:', error);
