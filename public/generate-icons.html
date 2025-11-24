@@ -1,0 +1,101 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Icon Generator</title>
+  <style>
+    body { margin: 0; padding: 20px; font-family: sans-serif; }
+    .container { max-width: 800px; margin: 0 auto; }
+    canvas { border: 1px solid #ccc; margin: 10px 0; }
+    button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Navi AI Icon Generator</h1>
+    <p>Right-click each canvas and "Save image as..." with the correct filename:</p>
+
+    <h3>icon-192.png (192x192)</h3>
+    <canvas id="canvas192" width="192" height="192"></canvas>
+    <button onclick="download('canvas192', 'icon-192.png')">Download 192x192</button>
+
+    <h3>icon-512.png (512x512)</h3>
+    <canvas id="canvas512" width="512" height="512"></canvas>
+    <button onclick="download('canvas512', 'icon-512.png')">Download 512x512</button>
+  </div>
+
+  <script>
+    const svgString = `<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="glowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a78bfa;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background with rounded corners -->
+  <rect width="512" height="512" rx="100" fill="url(#bgGradient)"/>
+
+  <!-- Orbit rings (representing AI/tech) -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="white" stroke-width="2" opacity="0.2"/>
+  <circle cx="256" cy="256" r="140" fill="none" stroke="white" stroke-width="2" opacity="0.3"/>
+
+  <!-- Central  glowing orb -->
+  <circle cx="256" cy="256" r="100" fill="url(#glowGradient)" opacity="0.8"/>
+  <circle cx="256" cy="256" r="80" fill="white" opacity="0.9"/>
+
+  <!-- Voice waves/sound waves -->
+  <path d="M 180 256 Q 180 230, 200 230" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.7"/>
+  <path d="M 160 256 Q 160 210, 200 210" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <path d="M 140 256 Q 140 190, 200 190" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.3"/>
+
+  <path d="M 332 256 Q 332 230, 312 230" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.7"/>
+  <path d="M 352 256 Q 352 210, 312 210" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <path d="M 372 256 Q 372 190, 312 190" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.3"/>
+
+  <!-- Sparkle/AI elements -->
+  <circle cx="320" cy="180" r="8" fill="white" opacity="0.9"/>
+  <circle cx="380" cy="240" r="6" fill="white" opacity="0.7"/>
+  <circle cx="130" cy="320" r="7" fill="white" opacity="0.8"/>
+  <circle cx="180" cy="380" r="5" fill="white" opacity="0.6"/>
+
+  <!-- Microphone icon in center -->
+  <rect x="236" y="240" width="40" height="50" rx="20" fill="#3b82f6"/>
+  <rect x="246" y="295" width="20" height="15" fill="#3b82f6"/>
+  <rect x="236" y="305" width="40" height="4" rx="2" fill="#3b82f6"/>
+</svg>
+`;
+
+    function drawToCanvas(canvasId, size) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+
+      const img = new Image();
+      const svgBlob = new Blob([svgString], {type: 'image/svg+xml'});
+      const url = URL.createObjectURL(svgBlob);
+
+      img.onload = function() {
+        ctx.drawImage(img, 0, 0, size, size);
+        URL.revokeObjectURL(url);
+      };
+
+      img.src = url;
+    }
+
+    function download(canvasId, filename) {
+      const canvas = document.getElementById(canvasId);
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    drawToCanvas('canvas192', 192);
+    drawToCanvas('canvas512', 512);
+  </script>
+</body>
+</html>
