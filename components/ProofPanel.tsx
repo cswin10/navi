@@ -1,16 +1,30 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, XCircle, ExternalLink, Mail, CheckSquare } from 'lucide-react';
+import { CheckCircle2, XCircle, ExternalLink, Mail, CheckSquare, Volume2 } from 'lucide-react';
 import { ExecutionResult } from '@/lib/types';
 
 interface ProofPanelProps {
   result: ExecutionResult;
+  audioUrl?: string | null;
   onNewAction: () => void;
 }
 
-export default function ProofPanel({ result, onNewAction }: ProofPanelProps) {
+export default function ProofPanel({ result, audioUrl, onNewAction }: ProofPanelProps) {
   const isSuccess = result.success;
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  useEffect(() => {
+    // Auto-play voice response when audioUrl is available
+    if (audioUrl && audioRef.current) {
+      console.log('[ProofPanel] Auto-playing execution result voice');
+      audioRef.current.play().catch((error) => {
+        console.error('[ProofPanel] Failed to auto-play:', error);
+      });
+    }
+  }, [audioUrl]);
 
   return (
     <motion.div
@@ -28,6 +42,27 @@ export default function ProofPanel({ result, onNewAction }: ProofPanelProps) {
         }
       `}
       >
+        {/* Audio element */}
+        {audioUrl && (
+          <audio
+            ref={audioRef}
+            src={audioUrl}
+            onPlay={() => setIsPlaying(true)}
+            onEnded={() => setIsPlaying(false)}
+            className="hidden"
+          />
+        )}
+
+        {/* Voice indicator */}
+        {audioUrl && (
+          <div className="flex items-center gap-2 mb-3">
+            <Volume2 className={`w-4 h-4 ${isPlaying ? 'text-green-400 animate-pulse' : 'text-gray-400'}`} />
+            <p className="text-xs text-gray-400">
+              {isPlaying ? 'Playing response...' : 'Voice response ready'}
+            </p>
+          </div>
+        )}
+
         {/* Status header */}
         <div className="flex items-center gap-3 mb-4">
           {isSuccess ? (
