@@ -13,14 +13,30 @@ export default function SignUpPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
+
+    // Validate password confirmation
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      setLoading(false)
+      return
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
+      setLoading(false)
+      return
+    }
 
     try {
       const supabase = createClient()
@@ -30,6 +46,7 @@ export default function SignUpPage() {
         email,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             name,
           },
@@ -38,26 +55,8 @@ export default function SignUpPage() {
 
       if (authError) throw authError
 
-      if (authData.user) {
-        // Create user profile
-        const { error: profileError } = await (supabase
-          .from('user_profiles') as any)
-          .insert({
-            id: authData.user.id,
-            name,
-            email,
-            preferences: {},
-            context_memory: {},
-          })
-
-        if (profileError) {
-          console.error('Profile creation error:', profileError)
-          // Continue anyway - profile can be created later
-        }
-
-        // Redirect to voice interface
-        router.push('/voice')
-      }
+      // Show success message - user needs to confirm email
+      setSuccess(true)
     } catch (err: any) {
       setError(err.message || 'Failed to create account')
     } finally {
@@ -84,55 +83,87 @@ export default function SignUpPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSignUp} className="space-y-4">
-              {error && (
-                <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 text-sm text-red-400">
-                  {error}
+            {success ? (
+              <div className="space-y-4">
+                <div className="bg-green-500/10 border border-green-500/50 rounded-lg p-4">
+                  <h3 className="text-green-400 font-medium mb-2">Check your email!</h3>
+                  <p className="text-slate-300 text-sm">
+                    We've sent a confirmation email to <strong>{email}</strong>
+                  </p>
+                  <p className="text-slate-400 text-sm mt-2">
+                    Click the link in the email to verify your account and get started.
+                  </p>
                 </div>
-              )}
+                <p className="text-center text-sm text-slate-400">
+                  Didn't receive the email? Check your spam folder or{' '}
+                  <button
+                    onClick={() => setSuccess(false)}
+                    className="text-blue-400 hover:text-blue-300"
+                  >
+                    try again
+                  </button>
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleSignUp} className="space-y-4">
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 text-sm text-red-400">
+                    {error}
+                  </div>
+                )}
 
-              <Input
-                label="Name (optional)"
-                type="text"
-                placeholder="Your name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+                <Input
+                  label="Name (optional)"
+                  type="text"
+                  placeholder="Your name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
 
-              <Input
-                label="Email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+                <Input
+                  label="Email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
 
-              <Input
-                label="Password"
-                type="password"
-                placeholder="Create a strong password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+                <Input
+                  label="Password"
+                  type="password"
+                  placeholder="Create a strong password (min. 6 characters)"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
 
-              <Button
-                type="submit"
-                className="w-full"
-                isLoading={loading}
-                disabled={loading}
-              >
-                Create Account
-              </Button>
+                <Input
+                  label="Confirm Password"
+                  type="password"
+                  placeholder="Type your password again"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
 
-              <p className="text-center text-sm text-slate-400">
-                Already have an account?{' '}
-                <Link href="/login" className="text-blue-400 hover:text-blue-300">
-                  Sign in
-                </Link>
-              </p>
-            </form>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  isLoading={loading}
+                  disabled={loading}
+                >
+                  Create Account
+                </Button>
+
+                <p className="text-center text-sm text-slate-400">
+                  Already have an account?{' '}
+                  <Link href="/login" className="text-blue-400 hover:text-blue-300">
+                    Sign in
+                  </Link>
+                </p>
+              </form>
+            )}
           </CardContent>
         </Card>
 

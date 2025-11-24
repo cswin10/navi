@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase-browser'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Toast } from '@/components/ui/Toast'
 import { User, Brain, Save, BookOpen } from 'lucide-react'
 
 interface UserProfile {
@@ -28,6 +29,9 @@ export default function ProfilePage() {
   const [name, setName] = useState('')
   const [knowledgeBase, setKnowledgeBase] = useState('')
   const [emailSignature, setEmailSignature] = useState('')
+
+  // Toast state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   useEffect(() => {
     loadProfile()
@@ -79,10 +83,10 @@ export default function ProfilePage() {
         throw error
       }
 
-      alert('Profile updated successfully!')
+      setToast({ message: 'Changes saved successfully!', type: 'success' })
       await loadProfile()
     } catch (error: any) {
-      alert(`Failed to update profile: ${error.message}`)
+      setToast({ message: `Failed to save changes: ${error.message}`, type: 'error' })
     } finally {
       setSaving(false)
     }
@@ -299,6 +303,15 @@ john@company.com
           Save Changes
         </Button>
       </div>
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   )
 }
