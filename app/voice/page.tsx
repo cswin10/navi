@@ -67,7 +67,8 @@ export default function VoicePage() {
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push('/');
+    // Force a full page refresh to clear all state
+    window.location.href = '/login';
   };
 
   const cleanStopPhrases = (text: string): string => {

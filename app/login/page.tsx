@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Sparkles } from 'lucide-react'
@@ -15,6 +15,23 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [checkingSession, setCheckingSession] = useState(true)
+
+  // Check if user is already logged in
+  useEffect(() => {
+    async function checkSession() {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (session) {
+        router.push('/voice')
+      } else {
+        setCheckingSession(false)
+      }
+    }
+
+    checkSession()
+  }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,6 +58,14 @@ export default function LoginPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <p className="text-slate-400">Loading...</p>
+      </div>
+    )
   }
 
   return (
