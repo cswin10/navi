@@ -44,10 +44,10 @@ export function Hero() {
             transition={{ delay: 0.2, duration: 0.6 }}
             className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight"
           >
-            Your Personal AI
+            Your AI Personal Assistant
             <br />
             <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              Operating System
+              That Actually Works
             </span>
           </motion.h2>
 
@@ -58,7 +58,7 @@ export function Hero() {
             transition={{ delay: 0.4, duration: 0.6 }}
             className="text-xl text-slate-300 mb-12 max-w-2xl mx-auto"
           >
-            Manage your life with voice commands. Create tasks, send emails, set reminders—all hands-free.
+            Speak naturally and watch things happen. Send emails, manage your calendar, create tasks, and get real time information about your day. All with your voice.
           </motion.p>
 
           {/* CTA Buttons */}
@@ -90,15 +90,15 @@ export function Hero() {
           >
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-green-400" />
-              <span>Voice-First</span>
+              <span>Voice Powered</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-green-400" />
-              <span>Smart AI</span>
+              <span>Real Integrations</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-green-400" />
-              <span>Secure & Private</span>
+              <span>Private & Secure</span>
             </div>
           </motion.div>
         </motion.div>

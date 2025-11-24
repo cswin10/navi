@@ -162,7 +162,7 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
             animate={{ opacity: 1 }}
             className="text-red-400 font-medium"
           >
-            Recording... Click to stop or say "Thank you Navi"
+            Listening... Click to stop
           </motion.p>
         )}
         {isProcessing && (
@@ -171,7 +171,7 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
             animate={{ opacity: 1 }}
             className="text-blue-400 font-medium"
           >
-            Transcribing...
+            Processing...
           </motion.p>
         )}
         {!isRecording && !isProcessing && (

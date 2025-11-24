@@ -21,10 +21,10 @@ export function CTA() {
           className="max-w-3xl mx-auto text-center"
         >
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Ready to Transform How You Work?
+            Stop Managing Tools. Start Getting Things Done.
           </h2>
           <p className="text-xl text-slate-300 mb-8">
-            Join NaviOS today and experience the future of personal productivity.
+            Join Navi today and get your personal AI assistant working for you in minutes.
           </p>
           <Link href="/signup">
             <Button size="lg" className="group">
@@ -33,7 +33,7 @@ export function CTA() {
             </Button>
           </Link>
           <p className="text-sm text-slate-400 mt-4">
-            No credit card required • Free forever
+            No credit card required. Free to use.
           </p>
         </motion.div>
       </div>
