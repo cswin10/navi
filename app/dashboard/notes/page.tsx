@@ -64,7 +64,8 @@ export default function NotesPage() {
       setNotes(data || [])
     } catch (error: any) {
       console.error('Error loading notes:', error)
-      setToast({ message: 'Failed to load notes', type: 'error' })
+      const errorMessage = error?.message || error?.error_description || String(error) || 'Failed to load notes'
+      setToast({ message: errorMessage, type: 'error' })
     } finally {
       setLoading(false)
     }
@@ -126,7 +127,8 @@ export default function NotesPage() {
       loadNotes()
     } catch (error: any) {
       console.error('Error creating note:', error)
-      setToast({ message: 'Failed to create note', type: 'error' })
+      const errorMessage = error?.message || error?.error_description || String(error) || 'Failed to create note'
+      setToast({ message: errorMessage, type: 'error' })
     }
   }
 
@@ -159,7 +161,8 @@ export default function NotesPage() {
       loadNotes()
     } catch (error: any) {
       console.error('Error updating note:', error)
-      setToast({ message: 'Failed to update note', type: 'error' })
+      const errorMessage = error?.message || error?.error_description || String(error) || 'Failed to update note'
+      setToast({ message: errorMessage, type: 'error' })
     }
   }
 
@@ -180,7 +183,8 @@ export default function NotesPage() {
       loadNotes()
     } catch (error: any) {
       console.error('Error deleting note:', error)
-      setToast({ message: 'Failed to delete note', type: 'error' })
+      const errorMessage = error?.message || error?.error_description || String(error) || 'Failed to delete note'
+      setToast({ message: errorMessage, type: 'error' })
     }
   }
 
