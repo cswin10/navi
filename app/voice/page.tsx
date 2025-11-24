@@ -228,11 +228,18 @@ export default function VoicePage() {
     setAppState('executing');
 
     try {
+      // Clean the intent to remove any non-serializable data
+      const cleanIntent = {
+        intent: intent.intent,
+        response: intent.response,
+        parameters: JSON.parse(JSON.stringify(intent.parameters)), // Deep clone to remove references
+      };
+
       const executeResponse = await fetch('/api/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          intent: intent,
+          intent: cleanIntent,
           sessionId,
           transcript: actionState.transcript,
         }),
@@ -319,11 +326,18 @@ export default function VoicePage() {
       // Execute each intent sequentially
       for (const intent of intents) {
         try {
+          // Clean the intent to remove any non-serializable data
+          const cleanIntent = {
+            intent: intent.intent,
+            response: intent.response,
+            parameters: JSON.parse(JSON.stringify(intent.parameters)), // Deep clone to remove references
+          };
+
           const executeResponse = await fetch('/api/execute', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              intent: intent,
+              intent: cleanIntent,
               sessionId,
               transcript: actionState.transcript,
             }),
