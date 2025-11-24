@@ -7,7 +7,7 @@ import VoiceInput from '@/components/VoiceInput';
 import TranscriptDisplay from '@/components/TranscriptDisplay';
 import ConfirmationPanel from '@/components/ConfirmationPanel';
 import ProofPanel from '@/components/ProofPanel';
-import { AppState, ActionState } from '@/lib/types';
+import { AppState, ActionState, ClaudeIntentResponse } from '@/lib/types';
 import { createClient } from '@/lib/supabase-browser';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, LogOut, LayoutDashboard } from 'lucide-react';
@@ -165,7 +165,7 @@ export default function VoicePage() {
         setAppState('idle');
       } else if (['remember', 'get_weather', 'get_news', 'get_calendar_events'].includes(processData.intent.intent)) {
         // Auto-execute: remember, weather, news, get calendar (no confirmation needed)
-        await handleConfirm();
+        await handleConfirm(processData.intent);
       } else {
         // Actions (create_task, send_email, add_calendar_event, timeblock_day): Require confirmation
         setAppState('confirming');
@@ -180,8 +180,10 @@ export default function VoicePage() {
     }
   };
 
-  const handleConfirm = async () => {
-    if (!actionState.intent || !sessionId) {
+  const handleConfirm = async (intentOverride?: ClaudeIntentResponse) => {
+    const intent = intentOverride || actionState.intent;
+
+    if (!intent || !sessionId) {
       console.error('[App] Missing intent or session');
       return;
     }
@@ -194,7 +196,7 @@ export default function VoicePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          intent: actionState.intent,
+          intent: intent,
           sessionId,
           transcript: actionState.transcript,
         }),
