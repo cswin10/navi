@@ -30,6 +30,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate that intent has a proper intent type
+    if (!intent.intent) {
+      console.error('[Execute API] Intent object missing intent type:', intent);
+      return NextResponse.json<ExecuteResponse>(
+        { success: false, error: 'Invalid intent: missing intent type' },
+        { status: 400 }
+      );
+    }
+
     console.log('[Execute API] Intent:', intent.intent);
     console.log('[Execute API] Parameters:', intent.parameters);
 
