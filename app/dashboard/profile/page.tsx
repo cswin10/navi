@@ -6,13 +6,14 @@ import { createClient } from '@/lib/supabase-browser'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { User, Brain, Save } from 'lucide-react'
+import { User, Brain, Save, BookOpen } from 'lucide-react'
 
 interface UserProfile {
   id: string
   name: string | null
   email: string | null
   context_memory: Record<string, string>
+  knowledge_base: string
   created_at: string
 }
 
@@ -25,6 +26,7 @@ export default function ProfilePage() {
   // Form state
   const [name, setName] = useState('')
   const [contextMemory, setContextMemory] = useState<Record<string, string>>({})
+  const [knowledgeBase, setKnowledgeBase] = useState('')
   const [newKey, setNewKey] = useState('')
   const [newValue, setNewValue] = useState('')
 
@@ -51,6 +53,7 @@ export default function ProfilePage() {
       setProfile(data)
       setName(data.name || '')
       setContextMemory(data.context_memory || {})
+      setKnowledgeBase(data.knowledge_base || '')
     }
 
     setLoading(false)
@@ -68,6 +71,7 @@ export default function ProfilePage() {
         .update({
           name,
           context_memory: contextMemory,
+          knowledge_base: knowledgeBase,
           updated_at: new Date().toISOString(),
         })
         .eq('id', profile.id)
@@ -230,6 +234,69 @@ export default function ProfilePage() {
             >
               Add Context
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Knowledge Base */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+              <BookOpen className="w-5 h-5 text-green-400" />
+            </div>
+            <div>
+              <CardTitle>Knowledge Base</CardTitle>
+              <CardDescription>
+                Paste important information for Navi to remember - contacts, preferences, schedules, anything!
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 text-sm text-slate-300">
+            <p className="font-medium text-white mb-1">How it works:</p>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              <li>Paste any information you want Navi to know (contacts, projects, preferences)</li>
+              <li>Navi will have access to this during all conversations</li>
+              <li>You can also say "Remember that..." and Navi will add to this automatically</li>
+              <li>This is like giving Navi your personal handbook</li>
+            </ul>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Your Knowledge Base
+            </label>
+            <textarea
+              value={knowledgeBase}
+              onChange={(e) => setKnowledgeBase(e.target.value)}
+              placeholder="Example:
+
+Important Contacts:
+- John Smith (Manager): john@company.com, +44 7700 900123
+- Sarah Johnson (Client): sarah@client.com
+
+My Schedule:
+- Team standup: Every Monday 10am
+- Work hours: 9am-5pm GMT
+- Lunch break: 1-2pm
+
+Current Projects:
+- Website Redesign (deadline: March 15, 2025)
+- Q1 Marketing Campaign
+- Product Launch Preparation
+
+Preferences:
+- I prefer morning meetings before 11am
+- I'm based in London
+- Always CC my manager on client emails"
+              rows={15}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-sm"
+            />
+            <p className="text-xs text-slate-500 mt-2">
+              {knowledgeBase.length} characters · Navi will always have access to this information
+            </p>
           </div>
         </CardContent>
       </Card>

@@ -19,10 +19,14 @@ async function getSessionActions(sessionId: string) {
   return data || [];
 }
 
-function buildSystemPrompt(userName?: string, contextMemory?: any) {
+function buildSystemPrompt(userName?: string, contextMemory?: any, knowledgeBase?: string) {
   const today = new Date();
   const contextString = contextMemory && typeof contextMemory === 'object' && Object.keys(contextMemory).length > 0
-    ? `\n\nContext about ${userName || 'this user'}:\n${Object.entries(contextMemory).map(([key, value]) => `- ${key}: ${value}`).join('\n')}`
+    ? `\n\nQuick Context:\n${Object.entries(contextMemory).map(([key, value]) => `- ${key}: ${value}`).join('\n')}`
+    : '';
+
+  const knowledgeBaseString = knowledgeBase && knowledgeBase.trim()
+    ? `\n\n${userName ? `${userName}'s` : 'User'} Knowledge Base:\n${knowledgeBase}`
     : '';
 
   return `You are Navi, ${userName ? `${userName}'s` : 'a'} concise voice-first AI personal operator.
@@ -30,7 +34,7 @@ function buildSystemPrompt(userName?: string, contextMemory?: any) {
 Today's date: ${today.toLocaleDateString('en-GB')} (UK format: DD/MM/YYYY)
 Current ISO date: ${today.toISOString().split('T')[0]}
 
-IMPORTANT: User is in UK timezone. When they say "tomorrow", calculate from today's date above.${contextString}
+IMPORTANT: User is in UK timezone. When they say "tomorrow", calculate from today's date above.${contextString}${knowledgeBaseString}
 
 You have memory of past conversations. Use context to be helpful and personalized.
 
@@ -41,10 +45,13 @@ IMPORTANT RULES:
 - Don't explain what you can do unless asked
 - Be direct and conversational
 - For dates: Use ISO format (YYYY-MM-DD) in due_date field
+- When user says "remember that...", "note that...", "keep in mind...", use intent "remember"
+- When user asks about weather, use intent "get_weather"
+- When user asks about news, use intent "get_news"
 
 Respond with JSON:
 {
-  "intent": "create_task" | "send_email" | "other",
+  "intent": "create_task" | "send_email" | "remember" | "get_weather" | "get_news" | "other",
   "response": "Brief response",
   "parameters": {
     // For create_task (ALL fields required):
@@ -56,12 +63,25 @@ Respond with JSON:
     "to": "email@example.com",
     "subject": "string",
     "body": "string"
+
+    // For remember:
+    "section": "string (e.g. 'Important Contacts', 'Preferences', 'Current Projects')",
+    "content": "string (what to remember)"
+
+    // For get_weather:
+    "location": "string (optional, city name - if not provided, use user's location from knowledge base)"
+
+    // For get_news:
+    "topic": "string (optional, e.g. 'technology', 'business', 'sports')"
   }
 }
 
 Examples:
 - User: "create a task" → intent: "other", response: "What should the task be?"
 - User: "task about demo tomorrow" → intent: "create_task", response: "I'll create a task 'demo' due tomorrow. Proceed?"
+- User: "remember that John's email is john@company.com" → intent: "remember", response: "Got it! I'll remember John's email."
+- User: "what's the weather like?" → intent: "get_weather", response: "Let me check the weather for you."
+- User: "any news on AI?" → intent: "get_news", response: "Let me find the latest AI news."
 - User: "hi" → intent: "other", response: "Hey! What do you need?"`;
 }
 
@@ -90,11 +110,11 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const { data: profile } = await (supabase
       .from('user_profiles') as any)
-      .select('name, context_memory')
+      .select('name, context_memory, knowledge_base')
       .eq('id', user.id)
       .single();
 
-    const systemPrompt = buildSystemPrompt(profile?.name, profile?.context_memory);
+    const systemPrompt = buildSystemPrompt(profile?.name, profile?.context_memory, profile?.knowledge_base);
 
     // Fetch conversation history for context (if sessionId provided)
     let conversationContext = '';
@@ -111,11 +131,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Call Claude API with conversation context
+    // Call Claude API with prompt caching for cost optimization
+    // Cache the system prompt and conversation history to reduce costs by 50%+
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-5-20250929',
       max_tokens: 1024,
-      system: systemPrompt + conversationContext,
+      system: [
+        {
+          type: 'text',
+          text: systemPrompt,
+          cache_control: { type: 'ephemeral' }
+        },
+        ...(conversationContext ? [{
+          type: 'text' as const,
+          text: conversationContext,
+          cache_control: { type: 'ephemeral' as const }
+        }] : [])
+      ],
       messages: [
         {
           role: 'user',

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, SendEmailParams } from '@/lib/types';
+import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, SendEmailParams, RememberParams, GetWeatherParams, GetNewsParams } from '@/lib/types';
 import { getCurrentUser, createClient } from '@/lib/auth';
 import { decrypt } from '@/lib/encryption';
 import type { Database } from '@/lib/database.types';
@@ -64,6 +64,18 @@ export async function POST(request: NextRequest) {
 
       case 'send_email':
         result = await executeSendEmail(user.id, intent.parameters as SendEmailParams);
+        break;
+
+      case 'remember':
+        result = await executeRemember(user.id, intent.parameters as RememberParams);
+        break;
+
+      case 'get_weather':
+        result = await executeGetWeather(user.id, intent.parameters as GetWeatherParams);
+        break;
+
+      case 'get_news':
+        result = await executeGetNews(user.id, intent.parameters as GetNewsParams);
         break;
 
       default:
@@ -192,6 +204,168 @@ async function executeSendEmail(userId: string, params: SendEmailParams): Promis
     return {
       success: false,
       error: error.message || 'Failed to send email',
+    };
+  }
+}
+
+/**
+ * Add information to user's knowledge base
+ */
+async function executeRemember(userId: string, params: RememberParams): Promise<ExecutionResult> {
+  try {
+    console.log('[Execute] Adding to knowledge base:', params);
+
+    const supabase = await createClient();
+
+    // Get current knowledge base
+    const { data: profile } = await (supabase
+      .from('user_profiles') as any)
+      .select('knowledge_base')
+      .eq('id', userId)
+      .single();
+
+    const currentKnowledgeBase = profile?.knowledge_base || '';
+
+    // Format the new entry
+    const timestamp = new Date().toLocaleDateString('en-GB');
+    const newEntry = `\n\n## ${params.section}\n[Added: ${timestamp}]\n${params.content}`;
+
+    // Append to knowledge base
+    const updatedKnowledgeBase = currentKnowledgeBase + newEntry;
+
+    const { error } = await (supabase
+      .from('user_profiles') as any)
+      .update({
+        knowledge_base: updatedKnowledgeBase,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId);
+
+    if (error) {
+      throw new Error(`Failed to update knowledge base: ${error.message}`);
+    }
+
+    console.log('[Execute] Knowledge base updated');
+
+    return {
+      success: true,
+      response: `Got it! I've added that to your knowledge base under "${params.section}".`,
+    };
+  } catch (error: any) {
+    console.error('[Execute] Remember failed:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to save to knowledge base',
+    };
+  }
+}
+
+/**
+ * Get current weather for a location
+ */
+async function executeGetWeather(userId: string, params: GetWeatherParams): Promise<ExecutionResult> {
+  try {
+    console.log('[Execute] Getting weather:', params);
+
+    // Get user's location from knowledge base if not provided
+    let location = params.location;
+
+    if (!location) {
+      const supabase = await createClient();
+      const { data: profile } = await (supabase
+        .from('user_profiles') as any)
+        .select('knowledge_base')
+        .eq('id', userId)
+        .single();
+
+      // Try to extract location from knowledge base
+      const kb = profile?.knowledge_base || '';
+      const locationMatch = kb.match(/location|based in|live in|from\s+([A-Za-z\s]+)/i);
+      location = locationMatch ? locationMatch[1].trim() : 'London';
+    }
+
+    // Call OpenWeatherMap API
+    const apiKey = process.env.OPENWEATHER_API_KEY;
+    if (!apiKey) {
+      throw new Error('Weather API key not configured');
+    }
+
+    const response = await fetch(
+      `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location)}&units=metric&appid=${apiKey}`
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch weather data');
+    }
+
+    const data = await response.json();
+
+    const weatherResponse = `It's ${Math.round(data.main.temp)}°C in ${data.name} with ${data.weather[0].description}. Feels like ${Math.round(data.main.feels_like)}°C.`;
+
+    console.log('[Execute] Weather fetched successfully');
+
+    return {
+      success: true,
+      response: weatherResponse,
+    };
+  } catch (error: any) {
+    console.error('[Execute] Weather fetch failed:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to get weather',
+    };
+  }
+}
+
+/**
+ * Get latest news
+ */
+async function executeGetNews(userId: string, params: GetNewsParams): Promise<ExecutionResult> {
+  try {
+    console.log('[Execute] Getting news:', params);
+
+    const apiKey = process.env.NEWS_API_KEY;
+    if (!apiKey) {
+      throw new Error('News API key not configured');
+    }
+
+    // Build query
+    const topic = params.topic || 'general';
+    const query = topic === 'general' ? 'top-headlines?country=gb' : `everything?q=${encodeURIComponent(topic)}&sortBy=publishedAt`;
+
+    const response = await fetch(
+      `https://newsapi.org/v2/${query}&pageSize=3&apiKey=${apiKey}`
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch news');
+    }
+
+    const data = await response.json();
+
+    if (!data.articles || data.articles.length === 0) {
+      return {
+        success: true,
+        response: `No news found for "${topic}". Try a different topic.`,
+      };
+    }
+
+    // Format top 3 articles
+    const articles = data.articles.slice(0, 3);
+    const newsResponse = `Here are the top stories${topic !== 'general' ? ` about ${topic}` : ''}:\n\n` +
+      articles.map((article: any, i: number) => `${i + 1}. ${article.title} - ${article.source.name}`).join('\n');
+
+    console.log('[Execute] News fetched successfully');
+
+    return {
+      success: true,
+      response: newsResponse,
+    };
+  } catch (error: any) {
+    console.error('[Execute] News fetch failed:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to get news',
     };
   }
 }

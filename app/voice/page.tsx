@@ -143,10 +143,9 @@ export default function VoicePage() {
         audioUrl: speakData.audioUrl || null,
       }));
 
-      // If intent is "other" (conversational), go back to idle after response plays
-      // AND store the conversation in Supabase for memory
+      // Handle different intent types
       if (processData.intent.intent === 'other') {
-        // Store conversational interaction in Supabase
+        // Conversational: Store and go back to idle
         if (sessionId) {
           try {
             const response = await fetch('/api/store-conversation', {
@@ -164,7 +163,11 @@ export default function VoicePage() {
           }
         }
         setAppState('idle');
+      } else if (['remember', 'get_weather', 'get_news'].includes(processData.intent.intent)) {
+        // Auto-execute: remember, weather, news (no confirmation needed)
+        await handleConfirm();
       } else {
+        // Actions (create_task, send_email): Require confirmation
         setAppState('confirming');
       }
     } catch (error: any) {
