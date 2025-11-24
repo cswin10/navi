@@ -253,11 +253,9 @@ export default function VoicePage() {
       return;
     }
 
-    // Validate intent has a proper type
+    // Validate intent has a proper type (should be guaranteed by earlier validation, but safety check)
     if (!intent.intent) {
-      console.error('[App] Invalid intent - missing intent type. Intent object:', JSON.stringify(intent, null, 2));
-      console.error('[App] actionState.intent:', JSON.stringify(actionState.intent, null, 2));
-      console.error('[App] intentOverride:', intentOverride ? JSON.stringify(intentOverride, null, 2) : 'undefined');
+      console.error('[App] Invalid intent - missing intent type. Keys:', intent ? Object.keys(intent) : 'null');
       setActionState((prev) => ({
         ...prev,
         error: 'Invalid intent received from assistant',
@@ -265,6 +263,7 @@ export default function VoicePage() {
           success: false,
           error: 'Invalid intent received from assistant',
         },
+        audioUrl: null,
       }));
       setAppState('completed');
       return;

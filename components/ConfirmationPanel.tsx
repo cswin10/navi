@@ -142,7 +142,7 @@ export default function ConfirmationPanel({
         {/* Action buttons */}
         <div className="flex gap-2 sm:gap-4">
           <motion.button
-            onClick={onConfirm}
+            onClick={() => onConfirm()}
             disabled={isExecuting}
             className={`
               flex-1 flex items-center justify-center gap-1.5 sm:gap-2
@@ -171,7 +171,7 @@ export default function ConfirmationPanel({
           </motion.button>
 
           <motion.button
-            onClick={onCancel}
+            onClick={() => onCancel()}
             disabled={isExecuting}
             className={`
               flex-1 flex items-center justify-center gap-1.5 sm:gap-2
