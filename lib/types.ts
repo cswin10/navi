@@ -1,5 +1,5 @@
 // Core intent types
-export type IntentType = 'create_task' | 'send_email' | 'remember' | 'get_weather' | 'get_news' | 'other';
+export type IntentType = 'create_task' | 'send_email' | 'remember' | 'get_weather' | 'get_news' | 'add_calendar_event' | 'get_calendar_events' | 'timeblock_day' | 'other';
 
 export type Priority = 'high' | 'medium' | 'low';
 
@@ -31,7 +31,30 @@ export interface GetNewsParams {
   topic?: string; // Optional, defaults to general news
 }
 
-export type IntentParams = CreateTaskParams | SendEmailParams | RememberParams | GetWeatherParams | GetNewsParams | Record<string, unknown>;
+export interface AddCalendarEventParams {
+  title: string;
+  start_time: string; // ISO datetime or natural language
+  end_time?: string; // ISO datetime or natural language (optional, defaults to 1 hour)
+  description?: string;
+  location?: string;
+}
+
+export interface GetCalendarEventsParams {
+  date?: string; // 'today', 'tomorrow', or ISO date
+  timeframe?: 'day' | 'week' | 'month';
+}
+
+export interface TimeblockDayParams {
+  date?: string; // 'today', 'tomorrow', or ISO date (defaults to today)
+  blocks: Array<{
+    start_time: string; // e.g., "9am", "14:00"
+    end_time: string; // e.g., "11am", "16:00"
+    title: string; // e.g., "Deep work", "Client calls"
+    description?: string;
+  }>;
+}
+
+export type IntentParams = CreateTaskParams | SendEmailParams | RememberParams | GetWeatherParams | GetNewsParams | AddCalendarEventParams | GetCalendarEventsParams | TimeblockDayParams | Record<string, unknown>;
 
 // Claude API Response
 export interface ClaudeIntentResponse {

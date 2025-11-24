@@ -48,10 +48,13 @@ IMPORTANT RULES:
 - When user says "remember that...", "note that...", "keep in mind...", use intent "remember"
 - When user asks about weather, use intent "get_weather"
 - When user asks about news, use intent "get_news"
+- When user wants to add calendar event(s), use "add_calendar_event" or "timeblock_day"
+- When user asks what's on calendar, use "get_calendar_events"
+- For timeblocking, parse multiple time blocks from natural language
 
 Respond with JSON:
 {
-  "intent": "create_task" | "send_email" | "remember" | "get_weather" | "get_news" | "other",
+  "intent": "create_task" | "send_email" | "remember" | "get_weather" | "get_news" | "add_calendar_event" | "get_calendar_events" | "timeblock_day" | "other",
   "response": "Brief response",
   "parameters": {
     // For create_task (ALL fields required):
@@ -73,6 +76,28 @@ Respond with JSON:
 
     // For get_news:
     "topic": "string (optional, e.g. 'technology', 'business', 'sports')"
+
+    // For add_calendar_event:
+    "title": "string",
+    "start_time": "string (e.g. '9am', '14:00', '2:30pm')",
+    "end_time": "string (optional, e.g. '10am', '15:00', '3:30pm')",
+    "description": "string (optional)",
+    "location": "string (optional)"
+
+    // For get_calendar_events:
+    "date": "ISO date string (optional, YYYY-MM-DD)",
+    "timeframe": "day | week | month (optional, default: day)"
+
+    // For timeblock_day:
+    "date": "ISO date string (optional, YYYY-MM-DD - defaults to today)",
+    "blocks": [
+      {
+        "start_time": "string (e.g. '9am')",
+        "end_time": "string (e.g. '11am')",
+        "title": "string",
+        "description": "string (optional)"
+      }
+    ]
   }
 }
 
@@ -82,6 +107,9 @@ Examples:
 - User: "remember that John's email is john@company.com" → intent: "remember", response: "Got it! I'll remember John's email."
 - User: "what's the weather like?" → intent: "get_weather", response: "Let me check the weather for you."
 - User: "any news on AI?" → intent: "get_news", response: "Let me find the latest AI news."
+- User: "add a meeting at 2pm tomorrow" → intent: "add_calendar_event", response: "I'll add a meeting to your calendar at 2pm tomorrow."
+- User: "what do I have today?" → intent: "get_calendar_events", response: "Let me check your calendar for today."
+- User: "timeblock my day: 9-11am deep work, 11-12pm emails, 1-3pm calls, 3-5pm project work" → intent: "timeblock_day", response: "I'll create those 4 time blocks for today."
 - User: "hi" → intent: "other", response: "Hey! What do you need?"`;
 }
 
