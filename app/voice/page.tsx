@@ -210,10 +210,42 @@ export default function VoicePage() {
 
       console.log('[App] Execution complete:', executeData.result);
 
-      setActionState((prev) => ({
-        ...prev,
-        executionResult: executeData.result,
-      }));
+      // Generate TTS for the execution result
+      if (executeData.result.response) {
+        try {
+          const speakResponse = await fetch('/api/speak', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: executeData.result.response }),
+          });
+
+          const speakData = await speakResponse.json();
+
+          if (speakData.success && speakData.audioUrl) {
+            setActionState((prev) => ({
+              ...prev,
+              executionResult: executeData.result,
+              audioUrl: speakData.audioUrl,
+            }));
+          } else {
+            setActionState((prev) => ({
+              ...prev,
+              executionResult: executeData.result,
+            }));
+          }
+        } catch (speakError) {
+          console.error('[App] TTS generation failed:', speakError);
+          setActionState((prev) => ({
+            ...prev,
+            executionResult: executeData.result,
+          }));
+        }
+      } else {
+        setActionState((prev) => ({
+          ...prev,
+          executionResult: executeData.result,
+        }));
+      }
 
       setAppState('completed');
     } catch (error: any) {
