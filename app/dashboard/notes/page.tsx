@@ -104,21 +104,38 @@ export default function NotesPage() {
 
     try {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-      if (!user) return
+      if (userError) {
+        console.error('Error getting user:', userError)
+        throw new Error(`Authentication error: ${userError.message}`)
+      }
 
-      const { error } = await (supabase
+      if (!user) {
+        setToast({ message: 'You must be logged in to create notes', type: 'error' })
+        return
+      }
+
+      const noteData = {
+        user_id: user.id,
+        title: newNoteTitle.trim(),
+        content: newNoteContent.trim(),
+        folder: newNoteFolder.trim() || null,
+      }
+
+      console.log('Creating note with data:', noteData)
+
+      const { data, error } = await (supabase
         .from('notes') as any)
-        .insert({
-          user_id: user.id,
-          title: newNoteTitle.trim(),
-          content: newNoteContent.trim(),
-          folder: newNoteFolder.trim(),
-        })
+        .insert(noteData)
+        .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase insert error:', error)
+        throw error
+      }
 
+      console.log('Note created successfully:', data)
       setToast({ message: 'Note created successfully!', type: 'success' })
       setShowCreateModal(false)
       setNewNoteTitle('')
@@ -126,8 +143,25 @@ export default function NotesPage() {
       setNewNoteFolder('')
       loadNotes()
     } catch (error: any) {
-      console.error('Error creating note:', error)
-      const errorMessage = error?.message || error?.error_description || String(error) || 'Failed to create note'
+      console.error('Error creating note - full error:', error)
+      console.error('Error type:', typeof error)
+      console.error('Error keys:', error ? Object.keys(error) : 'null')
+
+      let errorMessage = 'Failed to create note'
+      if (error?.message) {
+        errorMessage = error.message
+      } else if (error?.error_description) {
+        errorMessage = error.error_description
+      } else if (typeof error === 'string') {
+        errorMessage = error
+      } else if (error) {
+        try {
+          errorMessage = JSON.stringify(error)
+        } catch {
+          errorMessage = String(error)
+        }
+      }
+
       setToast({ message: errorMessage, type: 'error' })
     }
   }
