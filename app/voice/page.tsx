@@ -245,7 +245,9 @@ export default function VoicePage() {
 
     // Validate intent has a proper type
     if (!intent.intent) {
-      console.error('[App] Invalid intent - missing intent type:', intent);
+      console.error('[App] Invalid intent - missing intent type. Intent object:', JSON.stringify(intent, null, 2));
+      console.error('[App] actionState.intent:', JSON.stringify(actionState.intent, null, 2));
+      console.error('[App] intentOverride:', intentOverride ? JSON.stringify(intentOverride, null, 2) : 'undefined');
       setActionState((prev) => ({
         ...prev,
         error: 'Invalid intent received from assistant',
@@ -290,6 +292,7 @@ export default function VoicePage() {
       // Generate TTS for the execution result
       // Use spokenResponse if available (brief), otherwise use response or displayResponse
       const textToSpeak = executeData.result.spokenResponse || executeData.result.response || executeData.result.displayResponse;
+      console.log('[App] TTS text for result:', textToSpeak);
 
       if (textToSpeak) {
         try {
@@ -300,13 +303,18 @@ export default function VoicePage() {
           });
 
           const speakData = await speakResponse.json();
+          console.log('[App] TTS response for result - success:', speakData.success, 'audioUrl:', speakData.audioUrl?.slice(0, 50));
 
-          setActionState((prev) => ({
-            ...prev,
-            executionResult: executeData.result,
-            // Always update audioUrl - either with new audio or null to prevent old audio from playing
-            audioUrl: (speakData.success && speakData.audioUrl) ? speakData.audioUrl : null,
-          }));
+          setActionState((prev) => {
+            const newAudioUrl = (speakData.success && speakData.audioUrl) ? speakData.audioUrl : null;
+            console.log('[App] Setting new audioUrl:', newAudioUrl?.slice(0, 50), 'Previous:', prev.audioUrl?.slice(0, 50));
+            return {
+              ...prev,
+              executionResult: executeData.result,
+              // Always update audioUrl - either with new audio or null to prevent old audio from playing
+              audioUrl: newAudioUrl,
+            };
+          });
         } catch (speakError) {
           console.error('[App] TTS generation failed:', speakError);
           setActionState((prev) => ({
@@ -316,6 +324,7 @@ export default function VoicePage() {
           }));
         }
       } else {
+        console.log('[App] No text to speak for result, clearing audioUrl');
         setActionState((prev) => ({
           ...prev,
           executionResult: executeData.result,
