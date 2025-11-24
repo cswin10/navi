@@ -35,6 +35,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
+    // Ensure parameters is a valid JSON object (not undefined)
+    const safeParameters = intent.parameters ?? {};
+
     // Create action record in database
     const { data: action, error: actionError } = await (supabase
       .from('actions') as any)
@@ -43,15 +46,20 @@ export async function POST(request: NextRequest) {
         session_id: sessionId,
         transcript: transcript || '',
         intent: intent.intent,
-        parameters: intent.parameters,
+        parameters: safeParameters,
         execution_status: 'pending',
         execution_result: null,
       })
       .select()
       .single();
 
-    if (actionError || !action) {
-      throw new Error('Failed to create action record');
+    if (actionError) {
+      console.error('[Execute API] Action record creation error:', actionError);
+      throw new Error(`Failed to create action record: ${actionError.message || JSON.stringify(actionError)}`);
+    }
+
+    if (!action) {
+      throw new Error('Failed to create action record: No data returned');
     }
 
     console.log('[Execute API] Action created:', action.id);
