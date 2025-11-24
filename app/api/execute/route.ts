@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, SendEmailParams, RememberParams, GetWeatherParams, GetNewsParams } from '@/lib/types';
+import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, SendEmailParams, RememberParams, GetWeatherParams, GetNewsParams, AddCalendarEventParams, GetCalendarEventsParams, TimeblockDayParams } from '@/lib/types';
 import { getCurrentUser, createClient } from '@/lib/auth';
 import { decrypt } from '@/lib/encryption';
+import { getGoogleCalendarToken, parseTimeToISO } from '@/lib/google-calendar';
 import type { Database } from '@/lib/database.types';
 
 export async function POST(request: NextRequest) {
@@ -76,6 +77,18 @@ export async function POST(request: NextRequest) {
 
       case 'get_news':
         result = await executeGetNews(user.id, intent.parameters as GetNewsParams);
+        break;
+
+      case 'add_calendar_event':
+        result = await executeAddCalendarEvent(user.id, intent.parameters as AddCalendarEventParams);
+        break;
+
+      case 'get_calendar_events':
+        result = await executeGetCalendarEvents(user.id, intent.parameters as GetCalendarEventsParams);
+        break;
+
+      case 'timeblock_day':
+        result = await executeTimeblockDay(user.id, intent.parameters as TimeblockDayParams);
         break;
 
       default:
@@ -268,7 +281,7 @@ async function executeGetWeather(userId: string, params: GetWeatherParams): Prom
     console.log('[Execute] Getting weather:', params);
 
     // Get user's location from knowledge base if not provided
-    let location = params.location;
+    let location: string = params.location || '';
 
     if (!location) {
       const supabase = await createClient();
@@ -366,6 +379,268 @@ async function executeGetNews(userId: string, params: GetNewsParams): Promise<Ex
     return {
       success: false,
       error: error.message || 'Failed to get news',
+    };
+  }
+}
+
+/**
+ * Add a single event to Google Calendar
+ */
+async function executeAddCalendarEvent(userId: string, params: AddCalendarEventParams): Promise<ExecutionResult> {
+  try {
+    console.log('[Execute] Adding calendar event:', params);
+
+    // Get valid access token
+    const accessToken = await getGoogleCalendarToken(userId);
+
+    // Parse times to ISO format
+    const startDateTime = parseTimeToISO(params.start_time);
+    const endDateTime = params.end_time
+      ? parseTimeToISO(params.end_time)
+      : new Date(new Date(startDateTime).getTime() + 60 * 60 * 1000).toISOString(); // Default 1 hour duration
+
+    // Create calendar event
+    const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        summary: params.title,
+        description: params.description || '',
+        location: params.location || '',
+        start: {
+          dateTime: startDateTime,
+          timeZone: 'Europe/London',
+        },
+        end: {
+          dateTime: endDateTime,
+          timeZone: 'Europe/London',
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Google Calendar API error: ${error.error?.message || 'Unknown error'}`);
+    }
+
+    const event = await response.json();
+
+    console.log('[Execute] Calendar event created:', event.id);
+
+    return {
+      success: true,
+      response: `Event "${params.title}" added to your calendar at ${params.start_time}`,
+    };
+  } catch (error: any) {
+    console.error('[Execute] Calendar event creation failed:', error);
+
+    // Provide helpful error message if calendar not connected
+    if (error.message.includes('No calendar integration found')) {
+      return {
+        success: false,
+        error: 'Google Calendar not connected. Please connect it in Settings → Integrations.',
+      };
+    }
+
+    return {
+      success: false,
+      error: error.message || 'Failed to add calendar event',
+    };
+  }
+}
+
+/**
+ * Get events from Google Calendar
+ */
+async function executeGetCalendarEvents(userId: string, params: GetCalendarEventsParams): Promise<ExecutionResult> {
+  try {
+    console.log('[Execute] Getting calendar events:', params);
+
+    // Get valid access token
+    const accessToken = await getGoogleCalendarToken(userId);
+
+    // Calculate time range
+    const now = new Date();
+    let timeMin: Date;
+    let timeMax: Date;
+
+    if (params.date) {
+      // Specific date
+      timeMin = new Date(params.date);
+      timeMax = new Date(params.date);
+      timeMax.setDate(timeMax.getDate() + 1);
+    } else {
+      // Based on timeframe
+      const timeframe = params.timeframe || 'day';
+      timeMin = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      switch (timeframe) {
+        case 'day':
+          timeMax = new Date(timeMin);
+          timeMax.setDate(timeMax.getDate() + 1);
+          break;
+        case 'week':
+          timeMax = new Date(timeMin);
+          timeMax.setDate(timeMax.getDate() + 7);
+          break;
+        case 'month':
+          timeMax = new Date(timeMin);
+          timeMax.setMonth(timeMax.getMonth() + 1);
+          break;
+      }
+    }
+
+    // Get events from Google Calendar
+    const url = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
+    url.searchParams.append('timeMin', timeMin.toISOString());
+    url.searchParams.append('timeMax', timeMax.toISOString());
+    url.searchParams.append('orderBy', 'startTime');
+    url.searchParams.append('singleEvents', 'true');
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Google Calendar API error: ${error.error?.message || 'Unknown error'}`);
+    }
+
+    const data = await response.json();
+    const events = data.items || [];
+
+    if (events.length === 0) {
+      return {
+        success: true,
+        response: 'No events found for this time period.',
+      };
+    }
+
+    // Format events for response
+    const eventList = events.map((event: any) => {
+      const start = new Date(event.start.dateTime || event.start.date);
+      const timeStr = event.start.dateTime
+        ? start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+        : 'All day';
+      return `${timeStr}: ${event.summary}`;
+    }).join('\n');
+
+    const timeframeStr = params.timeframe === 'week' ? 'this week' :
+                         params.timeframe === 'month' ? 'this month' : 'today';
+
+    console.log('[Execute] Calendar events retrieved successfully');
+
+    return {
+      success: true,
+      response: `You have ${events.length} event${events.length > 1 ? 's' : ''} ${timeframeStr}:\n\n${eventList}`,
+    };
+  } catch (error: any) {
+    console.error('[Execute] Calendar events retrieval failed:', error);
+
+    if (error.message.includes('No calendar integration found')) {
+      return {
+        success: false,
+        error: 'Google Calendar not connected. Please connect it in Settings → Integrations.',
+      };
+    }
+
+    return {
+      success: false,
+      error: error.message || 'Failed to get calendar events',
+    };
+  }
+}
+
+/**
+ * Create multiple calendar events (timeblocking)
+ */
+async function executeTimeblockDay(userId: string, params: TimeblockDayParams): Promise<ExecutionResult> {
+  try {
+    console.log('[Execute] Timeblocking day:', params);
+
+    // Get valid access token
+    const accessToken = await getGoogleCalendarToken(userId);
+
+    // Determine the date
+    const targetDate = params.date ? new Date(params.date) : new Date();
+
+    // Create events in batch
+    const createdEvents: string[] = [];
+    const failedEvents: string[] = [];
+
+    for (const block of params.blocks) {
+      try {
+        const startDateTime = parseTimeToISO(block.start_time, targetDate);
+        const endDateTime = parseTimeToISO(block.end_time, targetDate);
+
+        const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            summary: block.title,
+            description: block.description || '',
+            start: {
+              dateTime: startDateTime,
+              timeZone: 'Europe/London',
+            },
+            end: {
+              dateTime: endDateTime,
+              timeZone: 'Europe/London',
+            },
+          }),
+        });
+
+        if (response.ok) {
+          createdEvents.push(`${block.start_time}-${block.end_time}: ${block.title}`);
+        } else {
+          failedEvents.push(block.title);
+        }
+      } catch (blockError) {
+        console.error('[Execute] Failed to create block:', block.title, blockError);
+        failedEvents.push(block.title);
+      }
+    }
+
+    console.log('[Execute] Timeblocking complete:', { created: createdEvents.length, failed: failedEvents.length });
+
+    if (createdEvents.length === 0) {
+      return {
+        success: false,
+        error: 'Failed to create any calendar events',
+      };
+    }
+
+    let response = `Created ${createdEvents.length} time block${createdEvents.length > 1 ? 's' : ''} for ${params.date || 'today'}:\n\n${createdEvents.join('\n')}`;
+
+    if (failedEvents.length > 0) {
+      response += `\n\nFailed to create: ${failedEvents.join(', ')}`;
+    }
+
+    return {
+      success: true,
+      response,
+    };
+  } catch (error: any) {
+    console.error('[Execute] Timeblocking failed:', error);
+
+    if (error.message.includes('No calendar integration found')) {
+      return {
+        success: false,
+        error: 'Google Calendar not connected. Please connect it in Settings → Integrations.',
+      };
+    }
+
+    return {
+      success: false,
+      error: error.message || 'Failed to create time blocks',
     };
   }
 }

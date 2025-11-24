@@ -163,11 +163,11 @@ export default function VoicePage() {
           }
         }
         setAppState('idle');
-      } else if (['remember', 'get_weather', 'get_news'].includes(processData.intent.intent)) {
-        // Auto-execute: remember, weather, news (no confirmation needed)
+      } else if (['remember', 'get_weather', 'get_news', 'get_calendar_events'].includes(processData.intent.intent)) {
+        // Auto-execute: remember, weather, news, get calendar (no confirmation needed)
         await handleConfirm();
       } else {
-        // Actions (create_task, send_email): Require confirmation
+        // Actions (create_task, send_email, add_calendar_event, timeblock_day): Require confirmation
         setAppState('confirming');
       }
     } catch (error: any) {
