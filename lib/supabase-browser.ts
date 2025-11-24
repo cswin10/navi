@@ -2,8 +2,16 @@ import { createBrowserClient } from '@supabase/ssr'
 import type { Database } from './database.types'
 
 export function createClient() {
-  return createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Missing Supabase environment variables:', {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseKey
+    })
+    throw new Error('Supabase configuration is missing. Please check your environment variables.')
+  }
+
+  return createBrowserClient<Database>(supabaseUrl, supabaseKey)
 }
