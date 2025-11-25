@@ -309,7 +309,10 @@ async function executeGetWeather(userId: string, params: GetWeatherParams): Prom
     // Call OpenWeatherMap API
     const apiKey = process.env.OPENWEATHER_API_KEY;
     if (!apiKey) {
-      throw new Error('Weather API key not configured');
+      return {
+        success: true,
+        response: "I'm sorry, I can't check the weather right now. This feature isn't available yet, but it's coming soon!",
+      };
     }
 
     const response = await fetch(
@@ -344,7 +347,10 @@ async function executeGetNews(userId: string, params: GetNewsParams): Promise<Ex
 
     const apiKey = process.env.NEWS_API_KEY;
     if (!apiKey) {
-      throw new Error('News API key not configured');
+      return {
+        success: true,
+        response: "I'm sorry, I can't fetch the news right now. This feature isn't available yet, but it's coming soon!",
+      };
     }
 
     // Build query
