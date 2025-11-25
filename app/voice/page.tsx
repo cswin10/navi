@@ -224,13 +224,14 @@ export default function VoicePage() {
     }
   };
 
-  const handleConfirm = async (intentOverride?: ClaudeIntentResponse) => {
-    // Check if we have multiple intents
-    if (actionState.intents && actionState.intents.length > 1) {
+  const handleConfirm = async (editedIntent?: ClaudeIntentResponse) => {
+    // Check if we have multiple intents (and no single edited intent override)
+    if (!editedIntent && actionState.intents && actionState.intents.length > 1) {
       return handleConfirmMultiple();
     }
 
-    const intent = intentOverride || actionState.intent;
+    // Use edited intent if provided, otherwise fall back to original
+    const intent = editedIntent || actionState.intent;
 
     if (!intent || !sessionId) {
       return;
