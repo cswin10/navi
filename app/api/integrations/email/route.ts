@@ -68,7 +68,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('[Email Integration] Error:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to connect email' },
       { status: 500 }
@@ -96,7 +95,6 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('[Email Integration] Disconnect error:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to disconnect email' },
       { status: 500 }

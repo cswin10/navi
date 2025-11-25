@@ -34,7 +34,6 @@ export default function ConfirmationPanel({
     // Store the initial audioUrl to only play it once
     if (audioUrl && !initialAudioUrlRef.current) {
       initialAudioUrlRef.current = audioUrl;
-      console.log('[ConfirmationPanel] Initial audioUrl set:', audioUrl?.slice(0, 50) + '...');
     }
   }, [audioUrl]);
 
@@ -42,13 +41,8 @@ export default function ConfirmationPanel({
     // Auto-play voice response only once when initially mounted with audioUrl
     // Don't replay if audioUrl changes (e.g., after execution starts)
     if (audioUrl && audioRef.current && !hasPlayedAudio && audioUrl === initialAudioUrlRef.current && !isExecuting) {
-      console.log('[ConfirmationPanel] Auto-playing voice response');
       setHasPlayedAudio(true);
-      audioRef.current.play().catch((error) => {
-        console.error('[ConfirmationPanel] Failed to auto-play:', error);
-      });
-    } else if (audioUrl && audioUrl !== initialAudioUrlRef.current) {
-      console.log('[ConfirmationPanel] AudioUrl changed, not replaying. New:', audioUrl?.slice(0, 50), 'Initial:', initialAudioUrlRef.current?.slice(0, 50));
+      audioRef.current.play().catch(() => {});
     }
   }, [audioUrl, hasPlayedAudio, isExecuting]);
 

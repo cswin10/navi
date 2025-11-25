@@ -149,25 +149,19 @@ Examples:
 }
 
 export async function POST(request: NextRequest) {
-  console.log('[Process API] Starting intent parsing...');
-
   try {
     // Verify authentication
     const user = await getCurrentUser();
-    console.log('[Process API] Authenticated user:', user.id);
 
     const body = await request.json();
     const { text, sessionId } = body;
 
     if (!text) {
-      console.error('[Process API] No text provided');
       return NextResponse.json<ProcessResponse>(
         { success: false, error: 'No text provided' },
         { status: 400 }
       );
     }
-
-    console.log('[Process API] Processing text:', text);
 
     // Get user profile for personalization
     const supabase = await createClient();
@@ -195,10 +189,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Call Claude API with prompt caching for cost optimization
-    // Cache the system prompt and conversation history to reduce costs by 50%+
+    // Using Haiku for fast intent classification (Sonnet overkill for this task)
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 1024,
+      model: 'claude-3-5-haiku-20241022',
+      max_tokens: 512,
       system: [
         {
           type: 'text',
@@ -218,8 +212,6 @@ export async function POST(request: NextRequest) {
         },
       ],
     });
-
-    console.log('[Process API] Claude response:', JSON.stringify(message.content, null, 2));
 
     // Extract text from Claude's response
     const contentBlock = message.content[0];
@@ -242,10 +234,8 @@ export async function POST(request: NextRequest) {
         // Multiple intents - validate each has an intent type
         const validIntents = parsed.intents.filter((i: any) => i && i.intent);
         if (validIntents.length === 0) {
-          console.error('[Process API] No valid intents found in array:', parsed.intents);
           throw new Error('No valid intents found in Claude response');
         }
-        console.log('[Process API] Parsed multiple intents:', validIntents.length);
         return NextResponse.json<ProcessResponse>({
           success: true,
           intents: validIntents,
@@ -254,22 +244,17 @@ export async function POST(request: NextRequest) {
       } else {
         // Single intent - validate it has an intent type
         if (!parsed.intent) {
-          console.error('[Process API] Parsed response missing intent field:', parsed);
           throw new Error('Claude response missing intent type');
         }
-        console.log('[Process API] Parsed single intent:', parsed.intent);
         return NextResponse.json<ProcessResponse>({
           success: true,
           intent: parsed as ClaudeIntentResponse,
         });
       }
     } catch (parseError: any) {
-      console.error('[Process API] Failed to parse Claude response:', parseError);
-      console.error('[Process API] Raw response text:', contentBlock.text);
       throw new Error(`Failed to parse intent from Claude response: ${parseError.message}`);
     }
   } catch (error: any) {
-    console.error('[Process API] Error:', error);
     return NextResponse.json<ProcessResponse>(
       {
         success: false,

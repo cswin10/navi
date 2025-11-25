@@ -3,8 +3,6 @@ import { createAction } from '@/lib/supabase';
 import { ClaudeIntentResponse } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
-  console.log('[Store Conversation API] Storing conversation...');
-
   try {
     const body = await request.json();
     const { sessionId, transcript, intent } = body as {
@@ -38,14 +36,11 @@ export async function POST(request: NextRequest) {
       throw new Error('Failed to store conversation');
     }
 
-    console.log('[Store Conversation API] Conversation stored:', action.id);
-
     return NextResponse.json({
       success: true,
       actionId: action.id,
     });
   } catch (error: any) {
-    console.error('[Store Conversation API] Error:', error);
     return NextResponse.json(
       {
         success: false,
