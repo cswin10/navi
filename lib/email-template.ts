@@ -1,9 +1,17 @@
 /**
+ * Capitalize the first letter of a string
+ */
+function capitalizeFirst(text: string): string {
+  if (!text) return text;
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/**
  * Generate HTML email template for user-sent emails (no branding)
  */
 export function generateEmailHTML(body: string, signature?: string): string {
-  // Convert newlines to <br> tags for body
-  const htmlBody = body.replace(/\n/g, '<br>');
+  // Capitalize first letter and convert newlines to <br> tags for body
+  const htmlBody = capitalizeFirst(body).replace(/\n/g, '<br>');
 
   // Convert newlines to <br> tags for signature
   const htmlSignature = signature ? signature.replace(/\n/g, '<br>') : '';
@@ -48,7 +56,7 @@ export function generateEmailHTML(body: string, signature?: string): string {
  * Generate plain text version of email (fallback for email clients that don't support HTML)
  */
 export function generateEmailText(body: string, signature?: string): string {
-  let text = body;
+  let text = capitalizeFirst(body);
 
   if (signature) {
     text += '\n\n' + signature;
