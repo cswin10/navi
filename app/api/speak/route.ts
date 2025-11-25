@@ -11,7 +11,7 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 // - shimmer: female, expressive (American)
 // - fable: British accent (neutral/narrative style)
 // - alloy: neutral
-const VOICE = 'nova'; // Female, warm
+const VOICE = 'shimmer'; // Female, expressive
 
 export async function POST(request: NextRequest) {
   try {

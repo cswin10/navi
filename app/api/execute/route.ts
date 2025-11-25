@@ -582,8 +582,22 @@ async function executeGetCalendarEvents(userId: string, params: GetCalendarEvent
       };
     }
 
-    // Format events for response
-    const eventList = events.map((event: any) => {
+    // Filter out events that have already passed (for today view)
+    const currentTime = new Date();
+    const filteredEvents = events.filter((event: any) => {
+      const eventEnd = new Date(event.end?.dateTime || event.end?.date || event.start.dateTime || event.start.date);
+      return eventEnd >= currentTime;
+    });
+
+    if (filteredEvents.length === 0) {
+      return {
+        success: true,
+        response: 'No upcoming events for this time period.',
+      };
+    }
+
+    // Format events for display
+    const eventList = filteredEvents.map((event: any) => {
       const start = new Date(event.start.dateTime || event.start.date);
       const timeStr = event.start.dateTime
         ? start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
@@ -594,9 +608,14 @@ async function executeGetCalendarEvents(userId: string, params: GetCalendarEvent
     const timeframeStr = params.timeframe === 'week' ? 'this week' :
                          params.timeframe === 'month' ? 'this month' : 'today';
 
+    // Brief spoken response - just the count
+    const eventCount = filteredEvents.length;
+    const spokenCount = eventCount === 1 ? '1 event' : `${eventCount} events`;
+
     return {
       success: true,
-      response: `You have ${events.length} event${events.length > 1 ? 's' : ''} ${timeframeStr}:\n\n${eventList}`,
+      displayResponse: `You have ${eventCount} event${eventCount > 1 ? 's' : ''} ${timeframeStr}:\n\n${eventList}`,
+      spokenResponse: `You have ${spokenCount} ${timeframeStr}.`,
     };
   } catch (error: any) {
 
