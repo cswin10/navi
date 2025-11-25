@@ -356,55 +356,13 @@ async function executeGetWeather(userId: string, params: GetWeatherParams): Prom
 }
 
 /**
- * Get latest news
+ * Get latest news (coming soon - disabled for beta)
  */
 async function executeGetNews(userId: string, params: GetNewsParams): Promise<ExecutionResult> {
-  try {
-
-    const apiKey = process.env.NEWS_API_KEY;
-    if (!apiKey) {
-      return {
-        success: true,
-        response: "I'm sorry, I can't fetch the news right now. This feature isn't available yet, but it's coming soon!",
-      };
-    }
-
-    // Build query
-    const topic = params.topic || 'general';
-    const query = topic === 'general' ? 'top-headlines?country=gb' : `everything?q=${encodeURIComponent(topic)}&sortBy=publishedAt`;
-
-    const response = await fetch(
-      `https://newsapi.org/v2/${query}&pageSize=3&apiKey=${apiKey}`
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch news');
-    }
-
-    const data = await response.json();
-
-    if (!data.articles || data.articles.length === 0) {
-      return {
-        success: true,
-        response: `No news found for "${topic}". Try a different topic.`,
-      };
-    }
-
-    // Format top 3 articles
-    const articles = data.articles.slice(0, 3);
-    const newsResponse = `Here are the top stories${topic !== 'general' ? ` about ${topic}` : ''}:\n\n` +
-      articles.map((article: any, i: number) => `${i + 1}. ${article.title} - ${article.source.name}`).join('\n');
-
-    return {
-      success: true,
-      response: newsResponse,
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error.message || 'Failed to get news',
-    };
-  }
+  return {
+    success: true,
+    response: "News updates are coming soon! For now, I can help you with weather, tasks, calendar, emails, and notes.",
+  };
 }
 
 /**
