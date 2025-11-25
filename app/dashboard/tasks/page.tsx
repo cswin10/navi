@@ -45,6 +45,16 @@ export default function TasksPage() {
 
   useEffect(() => {
     loadTasks()
+
+    // Check for ?add=true to auto-open modal (client-side only)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('add') === 'true') {
+        setShowAddModal(true)
+        // Clear the query param
+        window.history.replaceState({}, '', '/dashboard/tasks')
+      }
+    }
   }, [])
 
   async function loadTasks() {
@@ -69,8 +79,12 @@ export default function TasksPage() {
     setLoading(false)
   }
 
+  const priorityOrder = { high: 0, medium: 1, low: 2 }
+
   function getTasksByStatus(status: TaskStatus) {
-    return tasks.filter(task => task.status === status)
+    return tasks
+      .filter(task => task.status === status)
+      .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
   }
 
   function handleDragStart(task: Task) {
@@ -260,7 +274,7 @@ export default function TasksPage() {
                     )}
 
                     <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                      <Badge variant={task.priority} className="text-[10px] sm:text-xs">{task.priority}</Badge>
+                      <Badge variant={task.priority} className="text-[10px] sm:text-xs">{task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}</Badge>
                       {task.due_date && (
                         <div className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-400">
                           <Calendar className="w-3 h-3" />

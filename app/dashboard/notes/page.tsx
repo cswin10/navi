@@ -37,6 +37,15 @@ export default function NotesPage() {
 
   useEffect(() => {
     loadNotes()
+
+    // Check for ?add=true to auto-open modal (client-side only)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('add') === 'true') {
+        setShowCreateModal(true)
+        window.history.replaceState({}, '', '/dashboard/notes')
+      }
+    }
   }, [])
 
   useEffect(() => {
