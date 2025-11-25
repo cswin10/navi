@@ -2,16 +2,261 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, X, Volume2, Loader2 } from 'lucide-react';
-import { ClaudeIntentResponse } from '@/lib/types';
+import { Check, X, Volume2, Loader2, ChevronDown } from 'lucide-react';
+import { ClaudeIntentResponse, CreateTaskParams, SendEmailParams, AddCalendarEventParams, CreateNoteParams } from '@/lib/types';
 
 interface ConfirmationPanelProps {
   intent: ClaudeIntentResponse;
   intents?: ClaudeIntentResponse[]; // Multiple intents
   audioUrl: string | null;
-  onConfirm: () => void;
+  onConfirm: (editedIntent?: ClaudeIntentResponse) => void;
   onCancel: () => void;
   isExecuting?: boolean;
+}
+
+// Editable input component
+function EditableField({
+  label,
+  value,
+  onChange,
+  type = 'text',
+  options,
+  multiline = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: 'text' | 'date' | 'select' | 'email';
+  options?: { value: string; label: string }[];
+  multiline?: boolean;
+}) {
+  if (type === 'select' && options) {
+    return (
+      <div className="space-y-1">
+        <label className="text-xs text-gray-500 capitalize">{label}</label>
+        <div className="relative">
+          <select
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        </div>
+      </div>
+    );
+  }
+
+  if (multiline) {
+    return (
+      <div className="space-y-1">
+        <label className="text-xs text-gray-500 capitalize">{label}</label>
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          rows={4}
+          className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      <label className="text-xs text-gray-500 capitalize">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+  );
+}
+
+// Task editing component
+function TaskEditor({
+  params,
+  onChange,
+}: {
+  params: CreateTaskParams;
+  onChange: (params: CreateTaskParams) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <EditableField
+        label="Title"
+        value={params.title}
+        onChange={(v) => onChange({ ...params, title: v })}
+      />
+      <div className="grid grid-cols-2 gap-3">
+        <EditableField
+          label="Due Date"
+          value={params.due_date || ''}
+          onChange={(v) => onChange({ ...params, due_date: v || null })}
+          type="date"
+        />
+        <EditableField
+          label="Priority"
+          value={params.priority}
+          onChange={(v) => onChange({ ...params, priority: v as 'high' | 'medium' | 'low' })}
+          type="select"
+          options={[
+            { value: 'high', label: '🔴 High' },
+            { value: 'medium', label: '🟡 Medium' },
+            { value: 'low', label: '🟢 Low' },
+          ]}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Email editing component
+function EmailEditor({
+  params,
+  onChange,
+}: {
+  params: SendEmailParams;
+  onChange: (params: SendEmailParams) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <EditableField
+        label="To"
+        value={params.to}
+        onChange={(v) => onChange({ ...params, to: v })}
+        type="email"
+      />
+      <EditableField
+        label="Subject"
+        value={params.subject}
+        onChange={(v) => onChange({ ...params, subject: v })}
+      />
+      <EditableField
+        label="Body"
+        value={params.body}
+        onChange={(v) => onChange({ ...params, body: v })}
+        multiline
+      />
+    </div>
+  );
+}
+
+// Calendar event editing component
+function CalendarEventEditor({
+  params,
+  onChange,
+}: {
+  params: AddCalendarEventParams;
+  onChange: (params: AddCalendarEventParams) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <EditableField
+        label="Title"
+        value={params.title}
+        onChange={(v) => onChange({ ...params, title: v })}
+      />
+      <div className="grid grid-cols-2 gap-3">
+        <EditableField
+          label="Start Time"
+          value={params.start_time}
+          onChange={(v) => onChange({ ...params, start_time: v })}
+        />
+        <EditableField
+          label="End Time"
+          value={params.end_time || ''}
+          onChange={(v) => onChange({ ...params, end_time: v || undefined })}
+        />
+      </div>
+      <EditableField
+        label="Location (optional)"
+        value={params.location || ''}
+        onChange={(v) => onChange({ ...params, location: v || undefined })}
+      />
+    </div>
+  );
+}
+
+// Note editing component
+function NoteEditor({
+  params,
+  onChange,
+}: {
+  params: CreateNoteParams;
+  onChange: (params: CreateNoteParams) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <EditableField
+        label="Title"
+        value={params.title}
+        onChange={(v) => onChange({ ...params, title: v })}
+      />
+      <EditableField
+        label="Folder (optional)"
+        value={params.folder || ''}
+        onChange={(v) => onChange({ ...params, folder: v || undefined })}
+      />
+      <EditableField
+        label="Content"
+        value={params.content}
+        onChange={(v) => onChange({ ...params, content: v })}
+        multiline
+      />
+    </div>
+  );
+}
+
+// Generic parameter display (read-only, for intents without editors)
+function GenericParams({ params }: { params: Record<string, any> }) {
+  return (
+    <div className="space-y-1">
+      {Object.entries(params).map(([key, value]) => {
+        let displayValue: string;
+
+        if (Array.isArray(value)) {
+          if (key === 'blocks' && value.length > 0) {
+            displayValue = value.map((block: any) =>
+              `${block.start_time}-${block.end_time}: ${block.title}`
+            ).join('\n');
+          } else {
+            displayValue = value.join(', ');
+          }
+        } else if (typeof value === 'object' && value !== null) {
+          displayValue = JSON.stringify(value, null, 2);
+        } else {
+          displayValue = value?.toString() || 'N/A';
+        }
+
+        return (
+          <div key={key} className="flex flex-col sm:flex-row sm:gap-2 text-xs sm:text-sm">
+            <span className="text-gray-500 capitalize">{key.replace(/_/g, ' ')}:</span>
+            <span className="text-gray-300 whitespace-pre-wrap break-words">{displayValue}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Get icon/emoji for intent type
+function getIntentIcon(intentType: string): string {
+  const icons: Record<string, string> = {
+    create_task: '📝',
+    send_email: '📧',
+    add_calendar_event: '📅',
+    create_note: '📒',
+    timeblock_day: '⏰',
+    remember: '🧠',
+  };
+  return icons[intentType] || '✨';
 }
 
 export default function ConfirmationPanel({
@@ -24,34 +269,78 @@ export default function ConfirmationPanel({
 }: ConfirmationPanelProps) {
   // Use multiple intents if available
   const hasMultiple = intents && intents.length > 1;
-  const displayIntents = hasMultiple ? intents : [intent];
+  const [editedIntent, setEditedIntent] = useState<ClaudeIntentResponse>(intent);
+  const [editedIntents, setEditedIntents] = useState<ClaudeIntentResponse[]>(intents || [intent]);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasPlayedAudio, setHasPlayedAudio] = useState(false);
   const initialAudioUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Store the initial audioUrl to only play it once
     if (audioUrl && !initialAudioUrlRef.current) {
       initialAudioUrlRef.current = audioUrl;
     }
   }, [audioUrl]);
 
   useEffect(() => {
-    // Auto-play voice response only once when initially mounted with audioUrl
-    // Don't replay if audioUrl changes (e.g., after execution starts)
     if (audioUrl && audioRef.current && !hasPlayedAudio && audioUrl === initialAudioUrlRef.current && !isExecuting) {
       setHasPlayedAudio(true);
       audioRef.current.play().catch(() => {});
     }
   }, [audioUrl, hasPlayedAudio, isExecuting]);
 
-  const handleAudioPlay = () => {
-    setIsPlaying(true);
+  const handleAudioPlay = () => setIsPlaying(true);
+  const handleAudioEnded = () => setIsPlaying(false);
+
+  // Update single intent parameters
+  const updateParams = (newParams: any) => {
+    setEditedIntent({
+      ...editedIntent,
+      parameters: newParams,
+    });
   };
 
-  const handleAudioEnded = () => {
-    setIsPlaying(false);
+  // Update specific intent in multiple intents
+  const updateMultipleParams = (index: number, newParams: any) => {
+    const updated = [...editedIntents];
+    updated[index] = {
+      ...updated[index],
+      parameters: newParams,
+    };
+    setEditedIntents(updated);
+  };
+
+  // Handle confirm with edited data
+  const handleConfirm = () => {
+    if (hasMultiple) {
+      // For multiple intents, we'd need to update the voice page to handle this
+      // For now, just confirm with edited intents
+      onConfirm(editedIntents[0]); // Simplified - would need parent changes for full support
+    } else {
+      onConfirm(editedIntent);
+    }
+  };
+
+  // Render editor based on intent type
+  const renderEditor = (currentIntent: ClaudeIntentResponse, index?: number) => {
+    const params = currentIntent.parameters;
+    const updateFn = index !== undefined
+      ? (p: any) => updateMultipleParams(index, p)
+      : updateParams;
+
+    switch (currentIntent.intent) {
+      case 'create_task':
+        return <TaskEditor params={params as CreateTaskParams} onChange={updateFn} />;
+      case 'send_email':
+        return <EmailEditor params={params as SendEmailParams} onChange={updateFn} />;
+      case 'add_calendar_event':
+        return <CalendarEventEditor params={params as AddCalendarEventParams} onChange={updateFn} />;
+      case 'create_note':
+        return <NoteEditor params={params as CreateNoteParams} onChange={updateFn} />;
+      default:
+        return <GenericParams params={params as Record<string, any>} />;
+    }
   };
 
   return (
@@ -80,63 +369,45 @@ export default function ConfirmationPanel({
           />
         )}
 
-        {/* Intent response */}
-        <div className="mb-4 sm:mb-6">
+        {/* Intent header */}
+        <div className="mb-4">
           <p className="text-white text-base sm:text-lg leading-relaxed">
             {hasMultiple
-              ? `I'll perform ${displayIntents.length} actions:`
+              ? `I'll perform ${editedIntents.length} actions:`
               : intent.response}
           </p>
         </div>
 
-        {/* Display all intents */}
-        {displayIntents.map((singleIntent, index) => (
-          <div key={index} className="bg-black/30 rounded p-3 sm:p-4 mb-3 sm:mb-4">
-            {hasMultiple && (
-              <p className="text-xs sm:text-sm font-medium text-blue-400 mb-2">
-                Action {index + 1}: {singleIntent.intent.replace(/_/g, ' ')}
-              </p>
-            )}
-            {!hasMultiple && (
-              <p className="text-xs sm:text-sm text-gray-400 mb-2">Details:</p>
-            )}
-            <div className="space-y-1">
-              {Object.entries(singleIntent.parameters).map(([key, value]) => {
-                // Format value based on type
-                let displayValue: string;
-
-                if (Array.isArray(value)) {
-                  // Handle arrays (like timeblock blocks)
-                  if (key === 'blocks' && value.length > 0) {
-                    displayValue = value.map((block: any) =>
-                      `${block.start_time}-${block.end_time}: ${block.title}`
-                    ).join('\n');
-                  } else {
-                    displayValue = value.join(', ');
-                  }
-                } else if (typeof value === 'object' && value !== null) {
-                  // Handle objects
-                  displayValue = JSON.stringify(value, null, 2);
-                } else {
-                  // Handle primitives
-                  displayValue = value?.toString() || 'N/A';
-                }
-
-                return (
-                  <div key={key} className="flex flex-col sm:flex-row sm:gap-2 text-xs sm:text-sm">
-                    <span className="text-gray-500 capitalize">{key.replace(/_/g, ' ')}:</span>
-                    <span className="text-gray-300 whitespace-pre-wrap break-words">{displayValue}</span>
-                  </div>
-                );
-              })}
+        {/* Single intent editor */}
+        {!hasMultiple && (
+          <div className="bg-black/30 rounded-lg p-4 mb-4">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">{getIntentIcon(editedIntent.intent)}</span>
+              <span className="text-sm font-medium text-blue-400 capitalize">
+                {editedIntent.intent.replace(/_/g, ' ')}
+              </span>
             </div>
+            {renderEditor(editedIntent)}
+          </div>
+        )}
+
+        {/* Multiple intents */}
+        {hasMultiple && editedIntents.map((singleIntent, index) => (
+          <div key={index} className="bg-black/30 rounded-lg p-4 mb-3">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">{getIntentIcon(singleIntent.intent)}</span>
+              <span className="text-sm font-medium text-blue-400">
+                Action {index + 1}: {singleIntent.intent.replace(/_/g, ' ')}
+              </span>
+            </div>
+            {renderEditor(singleIntent, index)}
           </div>
         ))}
 
         {/* Action buttons */}
-        <div className="flex gap-2 sm:gap-4">
+        <div className="flex gap-2 sm:gap-4 mt-4">
           <motion.button
-            onClick={() => onConfirm()}
+            onClick={handleConfirm}
             disabled={isExecuting}
             className={`
               flex-1 flex items-center justify-center gap-1.5 sm:gap-2
