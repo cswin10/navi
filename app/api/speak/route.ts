@@ -3,10 +3,15 @@ import { TTSResponse } from '@/lib/types';
 import { getCurrentUser } from '@/lib/auth';
 import { formatForTTS } from '@/lib/tts-formatter';
 
-// ElevenLabs API configuration
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-const VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Rachel - clear, professional voice
-// Alternative: '21m00Tcm4TlvDq8ikWAM' for Rachel or 'pNInz6obpgDQGcFmaJgB' for Adam
+// OpenAI TTS configuration
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+// Available voices: alloy, echo, fable, onyx, nova, shimmer
+// - nova: female, warm (American)
+// - shimmer: female, expressive (American)
+// - fable: British accent (neutral/narrative style)
+// - alloy: neutral
+const VOICE = 'fable'; // British accent
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,33 +28,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!OPENAI_API_KEY) {
+      return NextResponse.json<TTSResponse>(
+        { success: false, error: 'TTS not configured' },
+        { status: 500 }
+      );
+    }
+
     // Format text for more natural TTS
     const formattedText = formatForTTS(text);
 
-    // Call ElevenLabs API
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
-      {
-        method: 'POST',
-        headers: {
-          'Accept': 'audio/mpeg',
-          'Content-Type': 'application/json',
-          'xi-api-key': ELEVENLABS_API_KEY!,
-        },
-        body: JSON.stringify({
-          text: formattedText,
-          model_id: 'eleven_turbo_v2',
-          voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
-          },
-        }),
-      }
-    );
+    // Call OpenAI TTS API
+    const response = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'tts-1', // Use tts-1 for speed/cost, tts-1-hd for quality
+        input: formattedText,
+        voice: VOICE,
+        response_format: 'mp3',
+        speed: 1.0, // 0.25 to 4.0
+      }),
+    });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`OpenAI TTS error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
     }
 
     // Convert audio to base64 for client
@@ -62,6 +69,7 @@ export async function POST(request: NextRequest) {
       audioUrl,
     });
   } catch (error: any) {
+    console.error('TTS error:', error);
     return NextResponse.json<TTSResponse>(
       {
         success: false,
