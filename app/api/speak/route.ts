@@ -7,10 +7,11 @@ import { formatForTTS } from '@/lib/tts-formatter';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // Available voices: alloy, echo, fable, onyx, nova, shimmer
-// - nova: female, warm (good for assistant)
-// - fable: British accent
+// - nova: female, warm (American)
+// - shimmer: female, expressive (American)
+// - fable: British accent (neutral/narrative style)
 // - alloy: neutral
-const VOICE = 'nova';
+const VOICE = 'fable'; // British accent
 
 export async function POST(request: NextRequest) {
   try {
