@@ -19,8 +19,6 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
     if (disabled || isProcessing) return;
 
     try {
-      console.log('[VoiceInput] Starting recording...');
-
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
       // Try to use the most compatible audio format
@@ -35,7 +33,6 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
       for (const type of supportedTypes) {
         if (MediaRecorder.isTypeSupported(type)) {
           mimeType = type;
-          console.log('[VoiceInput] Using mime type:', mimeType);
           break;
         }
       }
@@ -53,7 +50,6 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
       };
 
       mediaRecorder.onstop = async () => {
-        console.log('[VoiceInput] Recording stopped, processing...');
         setIsRecording(false);
         setIsProcessing(true);
 
@@ -62,7 +58,6 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
 
         // Create blob from chunks
         const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        console.log('[VoiceInput] Audio blob size:', audioBlob.size);
 
         // Send to transcription API
         try {
@@ -77,14 +72,11 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
           const data = await response.json();
 
           if (data.success && data.text) {
-            console.log('[VoiceInput] Transcription:', data.text);
             onTranscript(data.text);
           } else {
-            console.error('[VoiceInput] Transcription failed:', data.error);
             alert(`Transcription failed: ${data.error}`);
           }
         } catch (error) {
-          console.error('[VoiceInput] Error:', error);
           alert('Failed to transcribe audio');
         } finally {
           setIsProcessing(false);
@@ -94,17 +86,13 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
       mediaRecorder.start();
       mediaRecorderRef.current = mediaRecorder;
       setIsRecording(true);
-
-      console.log('[VoiceInput] Recording started');
     } catch (error) {
-      console.error('[VoiceInput] Error starting recording:', error);
       alert('Failed to access microphone. Please check permissions.');
     }
   }, [disabled, isProcessing, onTranscript]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      console.log('[VoiceInput] Stopping recording...');
       mediaRecorderRef.current.stop();
     }
   }, []);

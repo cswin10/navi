@@ -22,18 +22,14 @@ export default function ProofPanel({ result, audioUrl, onNewAction }: ProofPanel
     // Store the initial audioUrl on mount
     if (audioUrl && !initialAudioUrlRef.current) {
       initialAudioUrlRef.current = audioUrl;
-      console.log('[ProofPanel] Initial audioUrl set:', audioUrl?.slice(0, 50) + '...');
     }
   }, [audioUrl]);
 
   useEffect(() => {
     // Auto-play voice response only once when component mounts with audioUrl
     if (audioUrl && audioRef.current && !hasPlayedAudio && audioUrl === initialAudioUrlRef.current) {
-      console.log('[ProofPanel] Auto-playing execution result voice');
       setHasPlayedAudio(true);
-      audioRef.current.play().catch((error) => {
-        console.error('[ProofPanel] Failed to auto-play:', error);
-      });
+      audioRef.current.play().catch(() => {});
     }
   }, [audioUrl, hasPlayedAudio]);
 

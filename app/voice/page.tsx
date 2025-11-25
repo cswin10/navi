@@ -38,13 +38,11 @@ export default function VoicePage() {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
 
         if (userError || !user) {
-          console.error('[App] Not authenticated');
           router.push('/login');
           return;
         }
 
         setUserId(user.id);
-        console.log('[App] User authenticated:', user.id);
 
         // Create session for this user
         const { data, error } = await (supabase
@@ -56,9 +54,8 @@ export default function VoicePage() {
         if (error) throw error;
 
         setSessionId(data.id);
-        console.log('[App] Session created:', data.id);
       } catch (error) {
-        console.error('[App] Failed to initialize:', error);
+        // Session initialization failed silently
       }
     }
 
@@ -92,7 +89,6 @@ export default function VoicePage() {
         cleaned = cleaned.slice(0, -phrase.length).trim();
         // Remove trailing punctuation
         cleaned = cleaned.replace(/[.,!?]+$/, '').trim();
-        console.log('[App] Removed stop phrase:', phrase);
         break;
       }
     }
@@ -101,11 +97,8 @@ export default function VoicePage() {
   };
 
   const handleTranscript = async (text: string) => {
-    console.log('[App] Transcript received:', text);
-
     // Clean stop phrases from the end of the transcript
     const cleanedText = cleanStopPhrases(text);
-    console.log('[App] Cleaned transcript:', cleanedText);
 
     setActionState((prev) => ({ ...prev, transcript: cleanedText }));
     setAppState('processing');
@@ -123,8 +116,6 @@ export default function VoicePage() {
       if (!processData.success) {
         throw new Error(processData.error || 'Failed to process intent');
       }
-
-      console.log('[App] Raw process response:', JSON.stringify(processData, null, 2));
 
       // Determine if we have valid intents (single or multiple)
       let validIntent: any = null;
@@ -145,11 +136,8 @@ export default function VoicePage() {
 
       // If still no valid intent, throw error
       if (!validIntent) {
-        console.error('[App] No valid intent found in process response:', JSON.stringify(processData, null, 2));
         throw new Error('Invalid response from assistant - please try again');
       }
-
-      console.log('[App] Valid intent:', validIntent.intent);
 
       // Update processData with validated data
       processData.intent = validIntent;
@@ -167,9 +155,7 @@ export default function VoicePage() {
 
       const speakData = await speakResponse.json();
 
-      if (!speakData.success) {
-        console.error('[App] TTS failed:', speakData.error);
-      }
+      // TTS may fail silently - voice response is optional
 
       // Handle multiple intents
       if (processData.intents && processData.intents.length > 0) {
@@ -208,7 +194,7 @@ export default function VoicePage() {
         // Conversational: Store and go back to idle
         if (sessionId) {
           try {
-            const response = await fetch('/api/store-conversation', {
+            await fetch('/api/store-conversation', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -217,9 +203,8 @@ export default function VoicePage() {
                 intent: processData.intent,
               }),
             });
-            console.log('[App] Conversation stored');
           } catch (error) {
-            console.error('[App] Failed to store conversation:', error);
+            // Conversation storage is non-critical
           }
         }
         setAppState('idle');
@@ -231,7 +216,6 @@ export default function VoicePage() {
         setAppState('confirming');
       }
     } catch (error: any) {
-      console.error('[App] Error processing:', error);
       setActionState((prev) => ({
         ...prev,
         error: error.message,
@@ -249,13 +233,11 @@ export default function VoicePage() {
     const intent = intentOverride || actionState.intent;
 
     if (!intent || !sessionId) {
-      console.error('[App] Missing intent or session');
       return;
     }
 
     // Validate intent has a proper type (should be guaranteed by earlier validation, but safety check)
     if (!intent.intent) {
-      console.error('[App] Invalid intent - missing intent type. Keys:', intent ? Object.keys(intent) : 'null');
       setActionState((prev) => ({
         ...prev,
         error: 'Invalid intent received from assistant',
@@ -269,7 +251,6 @@ export default function VoicePage() {
       return;
     }
 
-    console.log('[App] Executing action...');
     setAppState('executing');
 
     try {
@@ -296,12 +277,9 @@ export default function VoicePage() {
         throw new Error(executeData.error || 'Failed to execute action');
       }
 
-      console.log('[App] Execution complete:', executeData.result);
-
       // Generate TTS for the execution result
       // Use spokenResponse if available (brief), otherwise use response or displayResponse
       const textToSpeak = executeData.result.spokenResponse || executeData.result.response || executeData.result.displayResponse;
-      console.log('[App] TTS text for result:', textToSpeak);
 
       if (textToSpeak) {
         try {
@@ -312,38 +290,29 @@ export default function VoicePage() {
           });
 
           const speakData = await speakResponse.json();
-          console.log('[App] TTS response for result - success:', speakData.success, 'audioUrl:', speakData.audioUrl?.slice(0, 50));
 
-          setActionState((prev) => {
-            const newAudioUrl = (speakData.success && speakData.audioUrl) ? speakData.audioUrl : null;
-            console.log('[App] Setting new audioUrl:', newAudioUrl?.slice(0, 50), 'Previous:', prev.audioUrl?.slice(0, 50));
-            return {
-              ...prev,
-              executionResult: executeData.result,
-              // Always update audioUrl - either with new audio or null to prevent old audio from playing
-              audioUrl: newAudioUrl,
-            };
-          });
-        } catch (speakError) {
-          console.error('[App] TTS generation failed:', speakError);
           setActionState((prev) => ({
             ...prev,
             executionResult: executeData.result,
-            audioUrl: null, // Clear old audio to prevent replay
+            audioUrl: (speakData.success && speakData.audioUrl) ? speakData.audioUrl : null,
+          }));
+        } catch (speakError) {
+          setActionState((prev) => ({
+            ...prev,
+            executionResult: executeData.result,
+            audioUrl: null,
           }));
         }
       } else {
-        console.log('[App] No text to speak for result, clearing audioUrl');
         setActionState((prev) => ({
           ...prev,
           executionResult: executeData.result,
-          audioUrl: null, // Clear old audio
+          audioUrl: null,
         }));
       }
 
       setAppState('completed');
     } catch (error: any) {
-      console.error('[App] Execution error:', error);
       setActionState((prev) => ({
         ...prev,
         error: error.message,
@@ -351,7 +320,7 @@ export default function VoicePage() {
           success: false,
           error: error.message,
         },
-        audioUrl: null, // Clear old audio to prevent replay
+        audioUrl: null,
       }));
       setAppState('completed');
     }
@@ -361,11 +330,9 @@ export default function VoicePage() {
     const intents = intentsToExecute || actionState.intents;
 
     if (!intents || intents.length === 0 || !sessionId) {
-      console.error('[App] Missing intents or session');
       return;
     }
 
-    console.log('[App] Executing multiple actions:', intents.length);
     setAppState('executing');
 
     try {
@@ -373,13 +340,7 @@ export default function VoicePage() {
       let allSuccessful = true;
 
       // Filter out any invalid intents without a proper type
-      const validIntents = intents.filter(i => {
-        if (!i.intent) {
-          console.warn('[App] Skipping invalid intent without type:', i);
-          return false;
-        }
-        return true;
-      });
+      const validIntents = intents.filter(i => i.intent);
 
       if (validIntents.length === 0) {
         throw new Error('No valid intents to execute');
@@ -425,8 +386,6 @@ export default function VoicePage() {
         }
       }
 
-      console.log('[App] All executions complete. Successful:', allSuccessful);
-
       // Combine results into a single execution result
       const successfulCount = results.filter(r => r.success).length;
       const combinedResult: ExecutionResult = {
@@ -465,7 +424,6 @@ export default function VoicePage() {
             audioUrl: (speakData.success && speakData.audioUrl) ? speakData.audioUrl : null,
           }));
         } catch (speakError) {
-          console.error('[App] TTS generation failed:', speakError);
           setActionState((prev) => ({
             ...prev,
             executionResult: combinedResult,
@@ -482,7 +440,6 @@ export default function VoicePage() {
 
       setAppState('completed');
     } catch (error: any) {
-      console.error('[App] Multi-execution error:', error);
       setActionState((prev) => ({
         ...prev,
         error: error.message,
@@ -496,12 +453,10 @@ export default function VoicePage() {
   };
 
   const handleCancel = () => {
-    console.log('[App] Action cancelled');
     resetState();
   };
 
   const handleNewAction = () => {
-    console.log('[App] Starting new action');
     resetState();
   };
 

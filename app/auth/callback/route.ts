@@ -11,7 +11,6 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (error) {
-      console.error('[Auth Callback] Error exchanging code:', error)
       return NextResponse.redirect(new URL('/login?error=auth_failed', requestUrl.origin))
     }
 
@@ -36,9 +35,7 @@ export async function GET(request: NextRequest) {
             email_signature: '',
           })
 
-        if (profileError) {
-          console.error('[Auth Callback] Error creating profile:', profileError)
-        }
+        // Profile creation error is non-critical
       }
     }
   }

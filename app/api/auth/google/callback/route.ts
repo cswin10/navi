@@ -82,7 +82,6 @@ export async function GET(request: NextRequest) {
     // Redirect back to integrations page with success
     return NextResponse.redirect(new URL('/dashboard/integrations?success=calendar_connected', request.url));
   } catch (error: any) {
-    console.error('[Google OAuth] Callback error:', error);
     return NextResponse.redirect(new URL('/dashboard/integrations?error=connection_failed', request.url));
   }
 }

@@ -8,12 +8,9 @@ import { generateEmailHTML, generateEmailText } from '@/lib/email-template';
 import type { Database } from '@/lib/database.types';
 
 export async function POST(request: NextRequest) {
-  console.log('[Execute API] Starting action execution...');
-
   try {
     // Verify authentication
     const user = await getCurrentUser();
-    console.log('[Execute API] Authenticated user:', user.id);
 
     const body = await request.json();
     const { intent, sessionId, transcript } = body as {
@@ -23,7 +20,6 @@ export async function POST(request: NextRequest) {
     };
 
     if (!intent || !sessionId) {
-      console.error('[Execute API] Missing required fields');
       return NextResponse.json<ExecuteResponse>(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
@@ -32,15 +28,11 @@ export async function POST(request: NextRequest) {
 
     // Validate that intent has a proper intent type
     if (!intent.intent) {
-      console.error('[Execute API] Intent object missing intent type:', intent);
       return NextResponse.json<ExecuteResponse>(
         { success: false, error: 'Invalid intent: missing intent type' },
         { status: 400 }
       );
     }
-
-    console.log('[Execute API] Intent:', intent.intent);
-    console.log('[Execute API] Parameters:', intent.parameters);
 
     const supabase = await createClient();
 
@@ -63,15 +55,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (actionError) {
-      console.error('[Execute API] Action record creation error:', actionError);
       throw new Error(`Failed to create action record: ${actionError.message || JSON.stringify(actionError)}`);
     }
 
     if (!action) {
       throw new Error('Failed to create action record: No data returned');
     }
-
-    console.log('[Execute API] Action created:', action.id);
 
     let result: ExecutionResult;
 
@@ -126,14 +115,11 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', action.id);
 
-    console.log('[Execute API] Execution complete:', result.success);
-
     return NextResponse.json<ExecuteResponse>({
       success: true,
       result,
     });
   } catch (error: any) {
-    console.error('[Execute API] Error:', error);
     return NextResponse.json<ExecuteResponse>(
       {
         success: false,
@@ -149,8 +135,6 @@ export async function POST(request: NextRequest) {
  */
 async function executeCreateTask(userId: string, params: CreateTaskParams): Promise<ExecutionResult> {
   try {
-    console.log('[Execute] Creating task:', params);
-
     const supabase = await createClient();
 
     // Create task in database
@@ -170,15 +154,12 @@ async function executeCreateTask(userId: string, params: CreateTaskParams): Prom
       throw new Error(`Database error: ${error.message}`);
     }
 
-    console.log('[Execute] Task created:', task.id);
-
     return {
       success: true,
       displayResponse: `Task created: "${params.title}"${params.due_date ? ` (Due: ${params.due_date})` : ''}`,
       spokenResponse: `Task created.`,
     };
   } catch (error: any) {
-    console.error('[Execute] Task creation failed:', error);
     return {
       success: false,
       error: error.message || 'Failed to create task',
@@ -191,7 +172,6 @@ async function executeCreateTask(userId: string, params: CreateTaskParams): Prom
  */
 async function executeSendEmail(userId: string, params: SendEmailParams): Promise<ExecutionResult> {
   try {
-    console.log('[Execute] Sending email:', { to: params.to, subject: params.subject });
 
     const supabase = await createClient();
 
@@ -243,14 +223,11 @@ async function executeSendEmail(userId: string, params: SendEmailParams): Promis
       html: htmlBody,
     });
 
-    console.log('[Execute] Email sent:', info.messageId);
-
     return {
       success: true,
       response: `Email sent successfully to ${params.to}`,
     };
   } catch (error: any) {
-    console.error('[Execute] Email send failed:', error);
     return {
       success: false,
       error: error.message || 'Failed to send email',
@@ -263,7 +240,6 @@ async function executeSendEmail(userId: string, params: SendEmailParams): Promis
  */
 async function executeRemember(userId: string, params: RememberParams): Promise<ExecutionResult> {
   try {
-    console.log('[Execute] Adding to knowledge base:', params);
 
     const supabase = await createClient();
 
@@ -295,14 +271,11 @@ async function executeRemember(userId: string, params: RememberParams): Promise<
       throw new Error(`Failed to update knowledge base: ${error.message}`);
     }
 
-    console.log('[Execute] Knowledge base updated');
-
     return {
       success: true,
       response: `Got it! I've added that to your knowledge base under "${params.section}".`,
     };
   } catch (error: any) {
-    console.error('[Execute] Remember failed:', error);
     return {
       success: false,
       error: error.message || 'Failed to save to knowledge base',
@@ -315,7 +288,6 @@ async function executeRemember(userId: string, params: RememberParams): Promise<
  */
 async function executeGetWeather(userId: string, params: GetWeatherParams): Promise<ExecutionResult> {
   try {
-    console.log('[Execute] Getting weather:', params);
 
     // Get user's location from knowledge base if not provided
     let location: string = params.location || '';
@@ -352,14 +324,11 @@ async function executeGetWeather(userId: string, params: GetWeatherParams): Prom
 
     const weatherResponse = `It's ${Math.round(data.main.temp)}°C in ${data.name} with ${data.weather[0].description}. Feels like ${Math.round(data.main.feels_like)}°C.`;
 
-    console.log('[Execute] Weather fetched successfully');
-
     return {
       success: true,
       response: weatherResponse,
     };
   } catch (error: any) {
-    console.error('[Execute] Weather fetch failed:', error);
     return {
       success: false,
       error: error.message || 'Failed to get weather',
@@ -372,7 +341,6 @@ async function executeGetWeather(userId: string, params: GetWeatherParams): Prom
  */
 async function executeGetNews(userId: string, params: GetNewsParams): Promise<ExecutionResult> {
   try {
-    console.log('[Execute] Getting news:', params);
 
     const apiKey = process.env.NEWS_API_KEY;
     if (!apiKey) {
@@ -405,14 +373,11 @@ async function executeGetNews(userId: string, params: GetNewsParams): Promise<Ex
     const newsResponse = `Here are the top stories${topic !== 'general' ? ` about ${topic}` : ''}:\n\n` +
       articles.map((article: any, i: number) => `${i + 1}. ${article.title} - ${article.source.name}`).join('\n');
 
-    console.log('[Execute] News fetched successfully');
-
     return {
       success: true,
       response: newsResponse,
     };
   } catch (error: any) {
-    console.error('[Execute] News fetch failed:', error);
     return {
       success: false,
       error: error.message || 'Failed to get news',
@@ -425,7 +390,6 @@ async function executeGetNews(userId: string, params: GetNewsParams): Promise<Ex
  */
 async function executeAddCalendarEvent(userId: string, params: AddCalendarEventParams): Promise<ExecutionResult> {
   try {
-    console.log('[Execute] Adding calendar event:', params);
 
     // Get valid access token
     const accessToken = await getGoogleCalendarToken(userId);
@@ -465,15 +429,12 @@ async function executeAddCalendarEvent(userId: string, params: AddCalendarEventP
 
     const event = await response.json();
 
-    console.log('[Execute] Calendar event created:', event.id);
-
     return {
       success: true,
       displayResponse: `Event "${params.title}" added to your calendar at ${params.start_time}${params.end_time ? ` to ${params.end_time}` : ''}`,
       spokenResponse: `Event added to your calendar.`,
     };
   } catch (error: any) {
-    console.error('[Execute] Calendar event creation failed:', error);
 
     // Provide helpful error message if calendar not connected
     if (error.message.includes('No calendar integration found')) {
@@ -495,7 +456,6 @@ async function executeAddCalendarEvent(userId: string, params: AddCalendarEventP
  */
 async function executeGetCalendarEvents(userId: string, params: GetCalendarEventsParams): Promise<ExecutionResult> {
   try {
-    console.log('[Execute] Getting calendar events:', params);
 
     // Get valid access token
     const accessToken = await getGoogleCalendarToken(userId);
@@ -571,14 +531,11 @@ async function executeGetCalendarEvents(userId: string, params: GetCalendarEvent
     const timeframeStr = params.timeframe === 'week' ? 'this week' :
                          params.timeframe === 'month' ? 'this month' : 'today';
 
-    console.log('[Execute] Calendar events retrieved successfully');
-
     return {
       success: true,
       response: `You have ${events.length} event${events.length > 1 ? 's' : ''} ${timeframeStr}:\n\n${eventList}`,
     };
   } catch (error: any) {
-    console.error('[Execute] Calendar events retrieval failed:', error);
 
     if (error.message.includes('No calendar integration found')) {
       return {
@@ -599,7 +556,6 @@ async function executeGetCalendarEvents(userId: string, params: GetCalendarEvent
  */
 async function executeTimeblockDay(userId: string, params: TimeblockDayParams): Promise<ExecutionResult> {
   try {
-    console.log('[Execute] Timeblocking day:', params);
 
     // Get valid access token
     const accessToken = await getGoogleCalendarToken(userId);
@@ -642,12 +598,9 @@ async function executeTimeblockDay(userId: string, params: TimeblockDayParams): 
           failedEvents.push(block.title);
         }
       } catch (blockError) {
-        console.error('[Execute] Failed to create block:', block.title, blockError);
         failedEvents.push(block.title);
       }
     }
-
-    console.log('[Execute] Timeblocking complete:', { created: createdEvents.length, failed: failedEvents.length });
 
     if (createdEvents.length === 0) {
       return {
@@ -673,7 +626,6 @@ async function executeTimeblockDay(userId: string, params: TimeblockDayParams): 
       spokenResponse,
     };
   } catch (error: any) {
-    console.error('[Execute] Timeblocking failed:', error);
 
     if (error.message.includes('No calendar integration found')) {
       return {
@@ -694,7 +646,6 @@ async function executeTimeblockDay(userId: string, params: TimeblockDayParams): 
  */
 async function executeCreateNote(userId: string, params: CreateNoteParams): Promise<ExecutionResult> {
   try {
-    console.log('[Execute] Creating note:', params);
 
     const supabase = await createClient();
 
@@ -713,8 +664,6 @@ async function executeCreateNote(userId: string, params: CreateNoteParams): Prom
       throw error;
     }
 
-    console.log('[Execute] Note created:', data.id);
-
     const folderText = params.folder ? ` in your ${params.folder} folder` : '';
     return {
       success: true,
@@ -722,7 +671,6 @@ async function executeCreateNote(userId: string, params: CreateNoteParams): Prom
       spokenResponse: `Note created.`,
     };
   } catch (error: any) {
-    console.error('[Execute] Note creation failed:', error);
     return {
       success: false,
       error: error.message || 'Failed to create note',

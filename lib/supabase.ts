@@ -31,13 +31,11 @@ export async function createSession(userId: string | null = null): Promise<Sessi
       .single();
 
     if (error) {
-      console.error('Error creating session:', error);
       return null;
     }
 
     return data;
   } catch (error) {
-    console.error('Error creating session:', error);
     return null;
   }
 }
@@ -52,13 +50,11 @@ export async function createAction(action: Omit<Action, 'id' | 'created_at'>): P
       .single();
 
     if (error) {
-      console.error('Error creating action:', error);
       return null;
     }
 
     return data;
   } catch (error) {
-    console.error('Error creating action:', error);
     return null;
   }
 }
@@ -81,13 +77,11 @@ export async function updateActionStatus(
       .eq('id', actionId);
 
     if (error) {
-      console.error('Error updating action status:', error);
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error('Error updating action status:', error);
     return false;
   }
 }
@@ -102,13 +96,11 @@ export async function getSessionActions(sessionId: string): Promise<Action[]> {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error getting session actions:', error);
       return [];
     }
 
     return data || [];
   } catch (error) {
-    console.error('Error getting session actions:', error);
     return [];
   }
 }

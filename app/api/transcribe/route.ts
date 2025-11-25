@@ -11,29 +11,19 @@ function getOpenAIClient() {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('[Transcribe API] Starting transcription request...');
-
   try {
     // Verify authentication
     const user = await getCurrentUser();
-    console.log('[Transcribe API] Authenticated user:', user.id);
 
     const formData = await request.formData();
     const audioFile = formData.get('audio') as File;
 
     if (!audioFile) {
-      console.error('[Transcribe API] No audio file provided');
       return NextResponse.json<TranscriptionResponse>(
         { success: false, error: 'No audio file provided' },
         { status: 400 }
       );
     }
-
-    console.log('[Transcribe API] Audio file received:', {
-      name: audioFile.name,
-      type: audioFile.type,
-      size: audioFile.size,
-    });
 
     // Convert File to Buffer for OpenAI API
     const buffer = await audioFile.arrayBuffer();
@@ -41,8 +31,6 @@ export async function POST(request: NextRequest) {
 
     // Create a File-like object for OpenAI
     const file = new File([audioBuffer], 'audio.webm', { type: audioFile.type });
-
-    console.log('[Transcribe API] Sending to Whisper API...');
 
     // Call Whisper API
     const openai = getOpenAIClient();
@@ -52,14 +40,11 @@ export async function POST(request: NextRequest) {
       language: 'en',
     });
 
-    console.log('[Transcribe API] Transcription successful:', transcription.text);
-
     return NextResponse.json<TranscriptionResponse>({
       success: true,
       text: transcription.text,
     });
   } catch (error: any) {
-    console.error('[Transcribe API] Error:', error);
     return NextResponse.json<TranscriptionResponse>(
       {
         success: false,

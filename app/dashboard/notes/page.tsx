@@ -72,7 +72,6 @@ export default function NotesPage() {
 
       setNotes(data || [])
     } catch (error: any) {
-      console.error('Error loading notes:', error)
       const errorMessage = error?.message || error?.error_description || String(error) || 'Failed to load notes'
       setToast({ message: errorMessage, type: 'error' })
     } finally {
@@ -116,7 +115,6 @@ export default function NotesPage() {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
 
       if (userError) {
-        console.error('Error getting user:', userError)
         throw new Error(`Authentication error: ${userError.message}`)
       }
 
@@ -132,19 +130,15 @@ export default function NotesPage() {
         folder: newNoteFolder.trim() || null,
       }
 
-      console.log('Creating note with data:', noteData)
-
       const { data, error } = await (supabase
         .from('notes') as any)
         .insert(noteData)
         .select()
 
       if (error) {
-        console.error('Supabase insert error:', error)
         throw error
       }
 
-      console.log('Note created successfully:', data)
       setToast({ message: 'Note created successfully!', type: 'success' })
       setShowCreateModal(false)
       setNewNoteTitle('')
@@ -152,10 +146,6 @@ export default function NotesPage() {
       setNewNoteFolder('')
       loadNotes()
     } catch (error: any) {
-      console.error('Error creating note - full error:', error)
-      console.error('Error type:', typeof error)
-      console.error('Error keys:', error ? Object.keys(error) : 'null')
-
       let errorMessage = 'Failed to create note'
       if (error?.message) {
         errorMessage = error.message
@@ -203,7 +193,6 @@ export default function NotesPage() {
       setNewNoteFolder('')
       loadNotes()
     } catch (error: any) {
-      console.error('Error updating note:', error)
       const errorMessage = error?.message || error?.error_description || String(error) || 'Failed to update note'
       setToast({ message: errorMessage, type: 'error' })
     }
@@ -225,7 +214,6 @@ export default function NotesPage() {
       setToast({ message: 'Note deleted successfully!', type: 'success' })
       loadNotes()
     } catch (error: any) {
-      console.error('Error deleting note:', error)
       const errorMessage = error?.message || error?.error_description || String(error) || 'Failed to delete note'
       setToast({ message: errorMessage, type: 'error' })
     }
