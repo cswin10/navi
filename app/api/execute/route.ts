@@ -288,12 +288,28 @@ async function executeRemember(userId: string, params: RememberParams): Promise<
  */
 async function executeGetWeather(userId: string, params: GetWeatherParams): Promise<ExecutionResult> {
   try {
+    const supabase = await createClient();
+
+    // Check daily rate limit (100 calls/day to stay within free tier)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const { count } = await (supabase
+      .from('actions') as any)
+      .select('*', { count: 'exact', head: true })
+      .eq('intent', 'get_weather')
+      .gte('created_at', today.toISOString());
+
+    if (count && count >= 100) {
+      return {
+        success: true,
+        response: "I've hit my daily limit for weather checks. Try again tomorrow!",
+      };
+    }
 
     // Get user's location from knowledge base if not provided
     let location: string = params.location || '';
 
     if (!location) {
-      const supabase = await createClient();
       const { data: profile } = await (supabase
         .from('user_profiles') as any)
         .select('knowledge_base')
