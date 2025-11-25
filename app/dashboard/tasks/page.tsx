@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -31,7 +31,6 @@ const statusConfig = {
 
 export default function TasksPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -46,16 +45,17 @@ export default function TasksPage() {
 
   useEffect(() => {
     loadTasks()
-  }, [])
 
-  // Check for ?add=true to auto-open modal
-  useEffect(() => {
-    if (searchParams.get('add') === 'true') {
-      setShowAddModal(true)
-      // Clear the query param
-      router.replace('/dashboard/tasks')
+    // Check for ?add=true to auto-open modal (client-side only)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('add') === 'true') {
+        setShowAddModal(true)
+        // Clear the query param
+        window.history.replaceState({}, '', '/dashboard/tasks')
+      }
     }
-  }, [searchParams, router])
+  }, [])
 
   async function loadTasks() {
     const supabase = createClient()
