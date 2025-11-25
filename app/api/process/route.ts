@@ -189,10 +189,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Call Claude API with prompt caching for cost optimization
-    // Cache the system prompt and conversation history to reduce costs by 50%+
+    // Using Haiku for fast intent classification (Sonnet overkill for this task)
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 1024,
+      model: 'claude-3-5-haiku-20241022',
+      max_tokens: 512,
       system: [
         {
           type: 'text',
