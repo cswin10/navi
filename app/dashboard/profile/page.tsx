@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Toast } from '@/components/ui/Toast'
-import { User, Brain, Save, BookOpen } from 'lucide-react'
+import { User, Brain, Save, Plus, Trash2 } from 'lucide-react'
 
 interface UserProfile {
   id: string
@@ -19,25 +19,31 @@ interface UserProfile {
   created_at: string
 }
 
+interface Person {
+  name: string
+  relationship: string
+  email: string
+}
+
 interface KnowledgeSections {
-  people: string
-  location: string
-  schedule: string
-  projects: string
-  preferences: string
-  goals: string
-  other: string
+  people: Person[]
+  location: string[]
+  schedule: string[]
+  projects: string[]
+  preferences: string[]
+  goals: string[]
+  other: string[]
 }
 
 function parseKnowledgeBase(kb: string): KnowledgeSections {
   const sections: KnowledgeSections = {
-    people: '',
-    location: '',
-    schedule: '',
-    projects: '',
-    preferences: '',
-    goals: '',
-    other: '',
+    people: [],
+    location: [],
+    schedule: [],
+    projects: [],
+    preferences: [],
+    goals: [],
+    other: [],
   }
 
   if (!kb) return sections
@@ -45,21 +51,40 @@ function parseKnowledgeBase(kb: string): KnowledgeSections {
   // Parse markdown-style sections
   const sectionRegex = /## (People|Location|Schedule|Projects|Preferences|Goals|Other)\n([\s\S]*?)(?=\n## |$)/gi
   let match
-  let usedContent = ''
 
   while ((match = sectionRegex.exec(kb)) !== null) {
     const sectionName = match[1].toLowerCase() as keyof KnowledgeSections
     const content = match[2].trim()
-    if (sections.hasOwnProperty(sectionName)) {
-      sections[sectionName] = content
-      usedContent += match[0]
-    }
-  }
 
-  // Any content not in a section goes to "other"
-  const remainingContent = kb.replace(sectionRegex, '').trim()
-  if (remainingContent && !sections.other) {
-    sections.other = remainingContent
+    if (sectionName === 'people') {
+      // Parse people entries: "Name (relationship) - email" or "Name - relationship - email"
+      const lines = content.split('\n').filter(l => l.trim())
+      sections.people = lines.map(line => {
+        // Try to parse structured format: "Name (relationship) - email@example.com"
+        const structuredMatch = line.match(/^(.+?)\s*\((.+?)\)\s*-?\s*(.*)$/)
+        if (structuredMatch) {
+          return {
+            name: structuredMatch[1].trim(),
+            relationship: structuredMatch[2].trim(),
+            email: structuredMatch[3].trim(),
+          }
+        }
+        // Try format: "Name - relationship - email"
+        const dashMatch = line.match(/^(.+?)\s*-\s*(.+?)\s*-\s*(.+)$/)
+        if (dashMatch) {
+          return {
+            name: dashMatch[1].trim(),
+            relationship: dashMatch[2].trim(),
+            email: dashMatch[3].trim(),
+          }
+        }
+        // Fallback: treat whole line as name
+        return { name: line.trim(), relationship: '', email: '' }
+      })
+    } else {
+      // Parse other sections as array of lines
+      sections[sectionName] = content.split('\n').filter(l => l.trim())
+    }
   }
 
   return sections
@@ -68,26 +93,39 @@ function parseKnowledgeBase(kb: string): KnowledgeSections {
 function buildKnowledgeBase(sections: KnowledgeSections): string {
   const parts: string[] = []
 
-  if (sections.people.trim()) {
-    parts.push(`## People\n${sections.people.trim()}`)
+  // Build people section
+  const peopleLines = sections.people
+    .filter(p => p.name.trim())
+    .map(p => {
+      if (p.relationship && p.email) {
+        return `${p.name} (${p.relationship}) - ${p.email}`
+      } else if (p.relationship) {
+        return `${p.name} (${p.relationship})`
+      } else if (p.email) {
+        return `${p.name} - ${p.email}`
+      }
+      return p.name
+    })
+  if (peopleLines.length > 0) {
+    parts.push(`## People\n${peopleLines.join('\n')}`)
   }
-  if (sections.location.trim()) {
-    parts.push(`## Location\n${sections.location.trim()}`)
+
+  // Build other sections
+  const sectionNames: (keyof Omit<KnowledgeSections, 'people'>)[] = ['location', 'schedule', 'projects', 'preferences', 'goals', 'other']
+  const sectionTitles: Record<string, string> = {
+    location: 'Location',
+    schedule: 'Schedule',
+    projects: 'Projects',
+    preferences: 'Preferences',
+    goals: 'Goals',
+    other: 'Other',
   }
-  if (sections.schedule.trim()) {
-    parts.push(`## Schedule\n${sections.schedule.trim()}`)
-  }
-  if (sections.projects.trim()) {
-    parts.push(`## Projects\n${sections.projects.trim()}`)
-  }
-  if (sections.preferences.trim()) {
-    parts.push(`## Preferences\n${sections.preferences.trim()}`)
-  }
-  if (sections.goals.trim()) {
-    parts.push(`## Goals\n${sections.goals.trim()}`)
-  }
-  if (sections.other.trim()) {
-    parts.push(`## Other\n${sections.other.trim()}`)
+
+  for (const section of sectionNames) {
+    const items = sections[section].filter(item => item.trim())
+    if (items.length > 0) {
+      parts.push(`## ${sectionTitles[section]}\n${items.join('\n')}`)
+    }
   }
 
   return parts.join('\n\n')
@@ -102,13 +140,13 @@ export default function ProfilePage() {
   // Form state
   const [name, setName] = useState('')
   const [knowledgeSections, setKnowledgeSections] = useState<KnowledgeSections>({
-    people: '',
-    location: '',
-    schedule: '',
-    projects: '',
-    preferences: '',
-    goals: '',
-    other: '',
+    people: [],
+    location: [],
+    schedule: [],
+    projects: [],
+    preferences: [],
+    goals: [],
+    other: [],
   })
   const [emailSignature, setEmailSignature] = useState('')
 
@@ -144,8 +182,48 @@ export default function ProfilePage() {
     setLoading(false)
   }
 
-  function updateSection(section: keyof KnowledgeSections, value: string) {
-    setKnowledgeSections(prev => ({ ...prev, [section]: value }))
+  // People management
+  function addPerson() {
+    setKnowledgeSections(prev => ({
+      ...prev,
+      people: [...prev.people, { name: '', relationship: '', email: '' }]
+    }))
+  }
+
+  function updatePerson(index: number, field: keyof Person, value: string) {
+    setKnowledgeSections(prev => ({
+      ...prev,
+      people: prev.people.map((p, i) => i === index ? { ...p, [field]: value } : p)
+    }))
+  }
+
+  function removePerson(index: number) {
+    setKnowledgeSections(prev => ({
+      ...prev,
+      people: prev.people.filter((_, i) => i !== index)
+    }))
+  }
+
+  // Section item management (for non-people sections)
+  function addSectionItem(section: keyof Omit<KnowledgeSections, 'people'>) {
+    setKnowledgeSections(prev => ({
+      ...prev,
+      [section]: [...prev[section], '']
+    }))
+  }
+
+  function updateSectionItem(section: keyof Omit<KnowledgeSections, 'people'>, index: number, value: string) {
+    setKnowledgeSections(prev => ({
+      ...prev,
+      [section]: prev[section].map((item, i) => i === index ? value : item)
+    }))
+  }
+
+  function removeSectionItem(section: keyof Omit<KnowledgeSections, 'people'>, index: number) {
+    setKnowledgeSections(prev => ({
+      ...prev,
+      [section]: prev[section].filter((_, i) => i !== index)
+    }))
   }
 
   async function handleSaveProfile() {
@@ -245,127 +323,285 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* People Section */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">👥</span>
-              <label className="text-sm font-medium text-white">People</label>
-              <span className="text-xs text-slate-500">Contacts, family, colleagues</span>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">👥</span>
+                <label className="text-sm font-medium text-white">People</label>
+                <span className="text-xs text-slate-500">Contacts, family, colleagues</span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={addPerson} className="text-purple-400 hover:text-purple-300">
+                <Plus className="w-4 h-4 mr-1" />
+                Add Person
+              </Button>
             </div>
-            <textarea
-              value={knowledgeSections.people}
-              onChange={(e) => updateSection('people', e.target.value)}
-              placeholder="My manager is Sarah (sarah@company.com)
-John handles client accounts
-My wife Emma's birthday is March 15"
-              rows={3}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
-            />
+            {knowledgeSections.people.length === 0 ? (
+              <p className="text-sm text-slate-500 italic">No contacts added yet. Click "Add Person" to get started.</p>
+            ) : (
+              <div className="space-y-3">
+                {knowledgeSections.people.map((person, index) => (
+                  <div key={index} className="flex gap-2 items-start bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        value={person.name}
+                        onChange={(e) => updatePerson(index, 'name', e.target.value)}
+                        placeholder="Name"
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                      />
+                      <input
+                        type="text"
+                        value={person.relationship}
+                        onChange={(e) => updatePerson(index, 'relationship', e.target.value)}
+                        placeholder="Relationship (e.g. Manager, Wife)"
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                      />
+                      <input
+                        type="email"
+                        value={person.email}
+                        onChange={(e) => updatePerson(index, 'email', e.target.value)}
+                        placeholder="Email (optional)"
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                      />
+                    </div>
+                    <button
+                      onClick={() => removePerson(index)}
+                      className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Location Section */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">📍</span>
-              <label className="text-sm font-medium text-white">Location</label>
-              <span className="text-xs text-slate-500">Where you're based, timezone</span>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📍</span>
+                <label className="text-sm font-medium text-white">Location</label>
+                <span className="text-xs text-slate-500">Where you're based, timezone</span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => addSectionItem('location')} className="text-purple-400 hover:text-purple-300">
+                <Plus className="w-4 h-4 mr-1" />
+                Add
+              </Button>
             </div>
-            <textarea
-              value={knowledgeSections.location}
-              onChange={(e) => updateSection('location', e.target.value)}
-              placeholder="Based in London, UK
-Timezone: GMT/BST
-Office at 123 Main Street"
-              rows={2}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
-            />
+            {knowledgeSections.location.length === 0 ? (
+              <p className="text-sm text-slate-500 italic">No location info added yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {knowledgeSections.location.map((item, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={item}
+                      onChange={(e) => updateSectionItem('location', index, e.target.value)}
+                      placeholder="e.g. Based in London, UK"
+                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    />
+                    <button
+                      onClick={() => removeSectionItem('location', index)}
+                      className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Schedule Section */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">📅</span>
-              <label className="text-sm font-medium text-white">Schedule</label>
-              <span className="text-xs text-slate-500">Work hours, recurring meetings</span>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📅</span>
+                <label className="text-sm font-medium text-white">Schedule</label>
+                <span className="text-xs text-slate-500">Work hours, recurring meetings</span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => addSectionItem('schedule')} className="text-purple-400 hover:text-purple-300">
+                <Plus className="w-4 h-4 mr-1" />
+                Add
+              </Button>
             </div>
-            <textarea
-              value={knowledgeSections.schedule}
-              onChange={(e) => updateSection('schedule', e.target.value)}
-              placeholder="Work hours: 9am-5pm
-Team standup every Monday at 10am
-Lunch break: 1-2pm (don't schedule meetings)"
-              rows={3}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
-            />
+            {knowledgeSections.schedule.length === 0 ? (
+              <p className="text-sm text-slate-500 italic">No schedule info added yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {knowledgeSections.schedule.map((item, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={item}
+                      onChange={(e) => updateSectionItem('schedule', index, e.target.value)}
+                      placeholder="e.g. Team standup every Monday at 10am"
+                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    />
+                    <button
+                      onClick={() => removeSectionItem('schedule', index)}
+                      className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Projects Section */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">💼</span>
-              <label className="text-sm font-medium text-white">Projects</label>
-              <span className="text-xs text-slate-500">Current work, deadlines</span>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">💼</span>
+                <label className="text-sm font-medium text-white">Projects</label>
+                <span className="text-xs text-slate-500">Current work, deadlines</span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => addSectionItem('projects')} className="text-purple-400 hover:text-purple-300">
+                <Plus className="w-4 h-4 mr-1" />
+                Add
+              </Button>
             </div>
-            <textarea
-              value={knowledgeSections.projects}
-              onChange={(e) => updateSection('projects', e.target.value)}
-              placeholder="Website redesign - deadline March 15
-Q1 marketing campaign - ongoing
-Client proposal for Acme Corp"
-              rows={3}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
-            />
+            {knowledgeSections.projects.length === 0 ? (
+              <p className="text-sm text-slate-500 italic">No projects added yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {knowledgeSections.projects.map((item, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={item}
+                      onChange={(e) => updateSectionItem('projects', index, e.target.value)}
+                      placeholder="e.g. Website redesign - deadline March 15"
+                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    />
+                    <button
+                      onClick={() => removeSectionItem('projects', index)}
+                      className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Preferences Section */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">⚙️</span>
-              <label className="text-sm font-medium text-white">Preferences</label>
-              <span className="text-xs text-slate-500">How you like things done</span>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">⚙️</span>
+                <label className="text-sm font-medium text-white">Preferences</label>
+                <span className="text-xs text-slate-500">How you like things done</span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => addSectionItem('preferences')} className="text-purple-400 hover:text-purple-300">
+                <Plus className="w-4 h-4 mr-1" />
+                Add
+              </Button>
             </div>
-            <textarea
-              value={knowledgeSections.preferences}
-              onChange={(e) => updateSection('preferences', e.target.value)}
-              placeholder="Prefer morning meetings
-Keep emails concise and professional
-Always CC manager on client communications"
-              rows={3}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
-            />
+            {knowledgeSections.preferences.length === 0 ? (
+              <p className="text-sm text-slate-500 italic">No preferences added yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {knowledgeSections.preferences.map((item, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={item}
+                      onChange={(e) => updateSectionItem('preferences', index, e.target.value)}
+                      placeholder="e.g. Keep emails concise and professional"
+                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    />
+                    <button
+                      onClick={() => removeSectionItem('preferences', index)}
+                      className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Goals Section */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🎯</span>
-              <label className="text-sm font-medium text-white">Goals</label>
-              <span className="text-xs text-slate-500">What you're working towards</span>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🎯</span>
+                <label className="text-sm font-medium text-white">Goals</label>
+                <span className="text-xs text-slate-500">What you're working towards</span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => addSectionItem('goals')} className="text-purple-400 hover:text-purple-300">
+                <Plus className="w-4 h-4 mr-1" />
+                Add
+              </Button>
             </div>
-            <textarea
-              value={knowledgeSections.goals}
-              onChange={(e) => updateSection('goals', e.target.value)}
-              placeholder="Complete project certification by Q2
-Read 2 books per month
-Exercise 3 times per week"
-              rows={3}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
-            />
+            {knowledgeSections.goals.length === 0 ? (
+              <p className="text-sm text-slate-500 italic">No goals added yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {knowledgeSections.goals.map((item, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={item}
+                      onChange={(e) => updateSectionItem('goals', index, e.target.value)}
+                      placeholder="e.g. Complete project certification by Q2"
+                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    />
+                    <button
+                      onClick={() => removeSectionItem('goals', index)}
+                      className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Other Section */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">📝</span>
-              <label className="text-sm font-medium text-white">Other</label>
-              <span className="text-xs text-slate-500">Anything else Navi should know</span>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📝</span>
+                <label className="text-sm font-medium text-white">Other</label>
+                <span className="text-xs text-slate-500">Anything else Navi should know</span>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => addSectionItem('other')} className="text-purple-400 hover:text-purple-300">
+                <Plus className="w-4 h-4 mr-1" />
+                Add
+              </Button>
             </div>
-            <textarea
-              value={knowledgeSections.other}
-              onChange={(e) => updateSection('other', e.target.value)}
-              placeholder="Any other information..."
-              rows={3}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
-            />
+            {knowledgeSections.other.length === 0 ? (
+              <p className="text-sm text-slate-500 italic">No other info added yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {knowledgeSections.other.map((item, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={item}
+                      onChange={(e) => updateSectionItem('other', index, e.target.value)}
+                      placeholder="Any other information..."
+                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    />
+                    <button
+                      onClick={() => removeSectionItem('other', index)}
+                      className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -416,17 +652,19 @@ john@company.com
         </CardContent>
       </Card>
 
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button
-          onClick={handleSaveProfile}
-          isLoading={saving}
-          disabled={saving}
-          className="min-w-32"
-        >
-          <Save className="w-4 h-4 mr-2" />
-          Save Changes
-        </Button>
+      {/* Sticky Save Button */}
+      <div className="sticky bottom-4 z-10 flex justify-center sm:justify-end">
+        <div className="bg-slate-900/95 backdrop-blur-sm border border-slate-700 rounded-lg p-3 shadow-lg">
+          <Button
+            onClick={handleSaveProfile}
+            isLoading={saving}
+            disabled={saving}
+            className="min-w-40 text-base"
+          >
+            <Save className="w-5 h-5 mr-2" />
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
       </div>
 
       {/* Toast Notification */}

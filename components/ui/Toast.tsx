@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { CheckCircle, XCircle, X } from 'lucide-react'
 
 export interface ToastProps {
@@ -10,35 +10,48 @@ export interface ToastProps {
   onClose: () => void
 }
 
-export function Toast({ message, type = 'success', duration = 3000, onClose }: ToastProps) {
+export function Toast({ message, type = 'success', duration = 4000, onClose }: ToastProps) {
+  const [isVisible, setIsVisible] = useState(false)
+
   useEffect(() => {
+    // Trigger animation on mount
+    setIsVisible(true)
+
     const timer = setTimeout(() => {
-      onClose()
+      setIsVisible(false)
+      setTimeout(onClose, 300) // Wait for fade out animation
     }, duration)
 
     return () => clearTimeout(timer)
   }, [duration, onClose])
 
   return (
-    <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+    <div
+      className={`fixed top-4 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-4 z-[100] transition-all duration-300 ${
+        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
+      }`}
+    >
       <div className={`
-        flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg min-w-[320px] max-w-md
+        flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl min-w-[300px] max-w-md
         ${type === 'success'
-          ? 'bg-green-500/20 border border-green-500/30 text-green-300'
-          : 'bg-red-500/20 border border-red-500/30 text-red-300'
+          ? 'bg-green-600 border border-green-500 text-white'
+          : 'bg-red-600 border border-red-500 text-white'
         }
       `}>
         {type === 'success' ? (
-          <CheckCircle className="w-5 h-5 flex-shrink-0" />
+          <CheckCircle className="w-6 h-6 flex-shrink-0" />
         ) : (
-          <XCircle className="w-5 h-5 flex-shrink-0" />
+          <XCircle className="w-6 h-6 flex-shrink-0" />
         )}
-        <p className="flex-1 text-sm font-medium">{message}</p>
+        <p className="flex-1 text-sm font-semibold">{message}</p>
         <button
-          onClick={onClose}
-          className="flex-shrink-0 hover:opacity-70 transition-opacity"
+          onClick={() => {
+            setIsVisible(false)
+            setTimeout(onClose, 300)
+          }}
+          className="flex-shrink-0 hover:opacity-70 transition-opacity p-1"
         >
-          <X className="w-4 h-4" />
+          <X className="w-5 h-5" />
         </button>
       </div>
     </div>
