@@ -66,10 +66,13 @@ IMPORTANT RULES:
 - For timeblocking, parse multiple time blocks from natural language
 - MULTIPLE INTENTS: If user requests multiple actions (e.g., "add calendar event AND create a task"), return ARRAY of intents
 - DO NOT ASSUME: Only do EXACTLY what the user asks. If they say "create a task to email John", just create the task - do NOT also draft the email. One request = one action unless they explicitly ask for multiple things.
+- CONTACT LOOKUP: For send_email, if user says a name instead of email (e.g., "email John about..."), put the NAME in the "to" field. The system will look up the email from the knowledge base.
+- COMPLETE TASK: When user wants to mark a task done/complete (e.g., "mark demo task as done", "complete the report task"), use "update_task" intent
+- READ NOTES: When user asks about their notes (e.g., "what notes do I have about X", "show my meeting notes"), use "get_notes" intent
 
 Respond with JSON (SINGLE INTENT):
 {
-  "intent": "create_task" | "get_tasks" | "send_email" | "remember" | "get_weather" | "get_news" | "add_calendar_event" | "get_calendar_events" | "timeblock_day" | "create_note" | "other",
+  "intent": "create_task" | "get_tasks" | "update_task" | "send_email" | "remember" | "get_weather" | "get_news" | "add_calendar_event" | "get_calendar_events" | "timeblock_day" | "create_note" | "get_notes" | "other",
   "response": "Brief response",
   "parameters": {
     // For create_task (ALL fields required):
@@ -81,10 +84,20 @@ Respond with JSON (SINGLE INTENT):
     "status": "all | todo | in_progress | done (optional, defaults to 'todo')",
     "priority": "high | medium | low (optional filter)"
 
+    // For update_task (mark task complete/update status):
+    "title": "string (task title to search for)",
+    "status": "todo | in_progress | done (optional, new status)",
+    "priority": "high | medium | low (optional, new priority)"
+
     // For send_email (ALL fields required):
-    "to": "email@example.com",
+    // NOTE: "to" can be a NAME (e.g., "John") - system will look up email from knowledge base
+    "to": "email@example.com OR contact name",
     "subject": "string",
     "body": "string"
+
+    // For get_notes:
+    "query": "string (optional, search term to find specific notes)",
+    "folder": "string (optional, filter by folder name)"
 
     // For remember:
     "section": "string (e.g. 'Important Contacts', 'Preferences', 'Current Projects')",
@@ -158,6 +171,11 @@ Examples:
 - User: "what tasks do I have?" → intent: "get_tasks", response: "Let me get your tasks."
 - User: "create a task to email John about the project" → intent: "create_task", response: "I'll create a task to email John about the project." (NOT send_email - just the task)
 - User: "timeblock my day: 9-11am deep work, 11-12pm emails, 1-3pm calls, 3-5pm project work" → intent: "timeblock_day", response: "I'll create those 4 time blocks for today."
+- User: "email John about the meeting tomorrow" → intent: "send_email", parameters: {"to": "John", "subject": "Meeting tomorrow", "body": "..."} (NAME in "to" field, system looks up email)
+- User: "mark demo task as done" → intent: "update_task", parameters: {"title": "demo", "status": "done"}
+- User: "complete the report task" → intent: "update_task", parameters: {"title": "report", "status": "done"}
+- User: "what notes do I have about the project?" → intent: "get_notes", parameters: {"query": "project"}
+- User: "show my meeting notes" → intent: "get_notes", parameters: {"folder": "Meeting Notes"}
 - User: "add a meeting at 3pm tomorrow and create a task to prepare slides" → MULTIPLE INTENTS:
   {
     "intents": [
