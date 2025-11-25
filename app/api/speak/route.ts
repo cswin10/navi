@@ -3,15 +3,14 @@ import { TTSResponse } from '@/lib/types';
 import { getCurrentUser } from '@/lib/auth';
 import { formatForTTS } from '@/lib/tts-formatter';
 
-// OpenAI TTS configuration
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+// ElevenLabs TTS configuration
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 
-// Available voices: alloy, echo, fable, onyx, nova, shimmer
-// - nova: female, warm (American)
-// - shimmer: female, expressive (American)
-// - fable: British accent (neutral/narrative style)
-// - alloy: neutral
-const VOICE = 'shimmer'; // Female, expressive
+// ElevenLabs voice IDs - British female voices
+// Charlotte: XB0fDUnXU5powFXDhCwa (British, warm)
+// Alice: Xb7hH8MSUJpSbSDYk0k2 (British, confident)
+// Lily: pFZP5JQG7iQjIQuC4Bku (British, warm, narrative)
+const VOICE_ID = 'pFZP5JQG7iQjIQuC4Bku'; // Lily - British female
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!OPENAI_API_KEY) {
+    if (!ELEVENLABS_API_KEY) {
       return NextResponse.json<TTSResponse>(
         { success: false, error: 'TTS not configured' },
         { status: 500 }
@@ -38,25 +37,28 @@ export async function POST(request: NextRequest) {
     // Format text for more natural TTS
     const formattedText = formatForTTS(text);
 
-    // Call OpenAI TTS API
-    const response = await fetch('https://api.openai.com/v1/audio/speech', {
+    // Call ElevenLabs TTS API
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'xi-api-key': ELEVENLABS_API_KEY,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'tts-1', // Use tts-1 for speed/cost, tts-1-hd for quality
-        input: formattedText,
-        voice: VOICE,
-        response_format: 'mp3',
-        speed: 1.15, // Slightly faster for snappier responses
+        text: formattedText,
+        model_id: 'eleven_turbo_v2_5', // Fast, low latency
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+          style: 0.0, // 0 = faster
+          use_speaker_boost: true,
+        },
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`OpenAI TTS error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+      throw new Error(`ElevenLabs TTS error: ${response.status} - ${errorData.detail?.message || JSON.stringify(errorData) || 'Unknown error'}`);
     }
 
     // Convert audio to base64 for client
