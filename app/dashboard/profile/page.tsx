@@ -416,17 +416,19 @@ john@company.com
         </CardContent>
       </Card>
 
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button
-          onClick={handleSaveProfile}
-          isLoading={saving}
-          disabled={saving}
-          className="min-w-32"
-        >
-          <Save className="w-4 h-4 mr-2" />
-          Save Changes
-        </Button>
+      {/* Sticky Save Button */}
+      <div className="sticky bottom-4 z-10 flex justify-center sm:justify-end">
+        <div className="bg-slate-900/95 backdrop-blur-sm border border-slate-700 rounded-lg p-3 shadow-lg">
+          <Button
+            onClick={handleSaveProfile}
+            isLoading={saving}
+            disabled={saving}
+            className="min-w-40 text-base"
+          >
+            <Save className="w-5 h-5 mr-2" />
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
       </div>
 
       {/* Toast Notification */}
