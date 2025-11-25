@@ -159,28 +159,36 @@ export default function ProfilePage() {
   }, [])
 
   async function loadProfile() {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) {
-      router.push('/login')
-      return
+      if (!user) {
+        router.push('/login')
+        return
+      }
+
+      const { data, error } = await (supabase
+        .from('user_profiles') as any)
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      if (data) {
+        setProfile(data)
+        setName(data.name || '')
+        setKnowledgeSections(parseKnowledgeBase(data.knowledge_base || ''))
+        setEmailSignature(data.email_signature || '')
+      } else if (error && error.code !== 'PGRST116') {
+        // PGRST116 = no rows returned (new user), which is fine
+        // Other errors should be shown to user
+        setToast({ message: 'Failed to load profile. You can still make changes.', type: 'error' })
+      }
+    } catch (error: any) {
+      setToast({ message: 'Failed to load profile. You can still make changes.', type: 'error' })
+    } finally {
+      setLoading(false)
     }
-
-    const { data, error } = await (supabase
-      .from('user_profiles') as any)
-      .select('*')
-      .eq('id', user.id)
-      .single()
-
-    if (data) {
-      setProfile(data)
-      setName(data.name || '')
-      setKnowledgeSections(parseKnowledgeBase(data.knowledge_base || ''))
-      setEmailSignature(data.email_signature || '')
-    }
-
-    setLoading(false)
   }
 
   // People management
@@ -228,22 +236,31 @@ export default function ProfilePage() {
   }
 
   async function handleSaveProfile() {
-    if (!profile) return
-
     setSaving(true)
 
     try {
       const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (!user) {
+        throw new Error('Not authenticated')
+      }
+
       const knowledgeBase = buildKnowledgeBase(knowledgeSections)
+
+      // Use upsert to handle both new and existing profiles
       const { error } = await (supabase
         .from('user_profiles') as any)
-        .update({
+        .upsert({
+          id: user.id,
+          email: user.email,
           name,
           knowledge_base: knowledgeBase,
           email_signature: emailSignature,
           updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'id'
         })
-        .eq('id', profile.id)
 
       if (error) {
         throw error
