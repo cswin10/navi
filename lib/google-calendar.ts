@@ -8,21 +8,21 @@ interface GoogleTokens {
 }
 
 /**
- * Get valid Google Calendar access token (refreshes if expired)
+ * Generic function to get a valid Google access token for any integration type
  */
-export async function getGoogleCalendarToken(userId: string): Promise<string> {
+async function getGoogleToken(userId: string, integrationType: string, errorMessage: string): Promise<string> {
   const supabase = await createClient();
 
   const { data: integration } = await (supabase
     .from('user_integrations') as any)
     .select('credentials')
     .eq('user_id', userId)
-    .eq('integration_type', 'google_calendar')
+    .eq('integration_type', integrationType)
     .eq('is_active', true)
     .single();
 
   if (!integration) {
-    throw new Error('Google Calendar not connected. Please connect in Settings → Integrations.');
+    throw new Error(errorMessage);
   }
 
   const credentials = integration.credentials as GoogleTokens;
@@ -49,7 +49,7 @@ export async function getGoogleCalendarToken(userId: string): Promise<string> {
 
     const newTokens = await response.json();
 
-    // Update stored credentials
+    // Update stored credentials for this integration
     await (supabase
       .from('user_integrations') as any)
       .update({
@@ -60,12 +60,34 @@ export async function getGoogleCalendarToken(userId: string): Promise<string> {
         },
       })
       .eq('user_id', userId)
-      .eq('integration_type', 'google_calendar');
+      .eq('integration_type', integrationType);
 
     return newTokens.access_token;
   }
 
   return credentials.access_token;
+}
+
+/**
+ * Get valid Google Calendar access token (refreshes if expired)
+ */
+export async function getGoogleCalendarToken(userId: string): Promise<string> {
+  return getGoogleToken(
+    userId,
+    'google_calendar',
+    'Google Calendar not connected. Please connect Google in Settings → Integrations.'
+  );
+}
+
+/**
+ * Get valid Gmail access token (refreshes if expired)
+ */
+export async function getGmailToken(userId: string): Promise<string> {
+  return getGoogleToken(
+    userId,
+    'google_gmail',
+    'Gmail not connected. Please connect Google in Settings → Integrations.'
+  );
 }
 
 /**

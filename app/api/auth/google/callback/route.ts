@@ -42,45 +42,70 @@ export async function GET(request: NextRequest) {
     // Encrypt the refresh token
     const encryptedRefreshToken = encrypt(tokens.refresh_token);
 
-    // Store in user_integrations
-    const { data: existing } = await (supabase
+    // Store credentials for both calendar and gmail integrations
+    const credentialsData = {
+      access_token: tokens.access_token,
+      refresh_token: encryptedRefreshToken,
+      expires_at: Date.now() + (tokens.expires_in * 1000),
+    };
+
+    // Upsert Google Calendar integration
+    const { data: existingCalendar } = await (supabase
       .from('user_integrations') as any)
       .select('id')
       .eq('user_id', user.id)
       .eq('integration_type', 'google_calendar')
       .maybeSingle();
 
-    if (existing) {
-      // Update existing
+    if (existingCalendar) {
       await (supabase
         .from('user_integrations') as any)
-        .update({
-          credentials: {
-            access_token: tokens.access_token,
-            refresh_token: encryptedRefreshToken,
-            expires_at: Date.now() + (tokens.expires_in * 1000),
-          },
-          is_active: true,
-        })
-        .eq('id', existing.id);
+        .update({ credentials: credentialsData, is_active: true })
+        .eq('id', existingCalendar.id);
     } else {
-      // Create new
       await (supabase
         .from('user_integrations') as any)
         .insert({
           user_id: user.id,
           integration_type: 'google_calendar',
-          credentials: {
-            access_token: tokens.access_token,
-            refresh_token: encryptedRefreshToken,
-            expires_at: Date.now() + (tokens.expires_in * 1000),
-          },
+          credentials: credentialsData,
           is_active: true,
         });
     }
 
+    // Upsert Gmail integration (uses same OAuth tokens)
+    const { data: existingGmail } = await (supabase
+      .from('user_integrations') as any)
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('integration_type', 'google_gmail')
+      .maybeSingle();
+
+    if (existingGmail) {
+      await (supabase
+        .from('user_integrations') as any)
+        .update({ credentials: credentialsData, is_active: true })
+        .eq('id', existingGmail.id);
+    } else {
+      await (supabase
+        .from('user_integrations') as any)
+        .insert({
+          user_id: user.id,
+          integration_type: 'google_gmail',
+          credentials: credentialsData,
+          is_active: true,
+        });
+    }
+
+    // Delete old SMTP email integration if exists (replaced by Gmail OAuth)
+    await (supabase
+      .from('user_integrations') as any)
+      .delete()
+      .eq('user_id', user.id)
+      .eq('integration_type', 'email');
+
     // Redirect back to integrations page with success
-    return NextResponse.redirect(new URL('/dashboard/integrations?success=calendar_connected', request.url));
+    return NextResponse.redirect(new URL('/dashboard/integrations?success=google_connected', request.url));
   } catch (error: any) {
     return NextResponse.redirect(new URL('/dashboard/integrations?error=connection_failed', request.url));
   }

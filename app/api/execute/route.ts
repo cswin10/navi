@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
 import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, SendEmailParams, RememberParams, GetWeatherParams, GetNewsParams, AddCalendarEventParams, GetCalendarEventsParams, TimeblockDayParams, CreateNoteParams } from '@/lib/types';
 import { getCurrentUser, createClient } from '@/lib/auth';
-import { decrypt } from '@/lib/encryption';
-import { getGoogleCalendarToken, parseTimeToISO } from '@/lib/google-calendar';
+import { getGoogleCalendarToken, getGmailToken, parseTimeToISO } from '@/lib/google-calendar';
 import { generateEmailHTML, generateEmailText } from '@/lib/email-template';
 import type { Database } from '@/lib/database.types';
 
@@ -168,25 +166,14 @@ async function executeCreateTask(userId: string, params: CreateTaskParams): Prom
 }
 
 /**
- * Send an email using user's connected email account
+ * Send an email using Gmail API (OAuth)
  */
 async function executeSendEmail(userId: string, params: SendEmailParams): Promise<ExecutionResult> {
   try {
+    // Get Gmail access token
+    const accessToken = await getGmailToken(userId);
 
     const supabase = await createClient();
-
-    // Get user's email integration
-    const { data: integration, error: integrationError } = await (supabase
-      .from('user_integrations') as any)
-      .select('credentials')
-      .eq('user_id', userId)
-      .eq('integration_type', 'email')
-      .eq('is_active', true)
-      .single();
-
-    if (integrationError || !integration) {
-      throw new Error('No email account connected. Please connect your email in Settings → Integrations.');
-    }
 
     // Get user's email signature from profile
     const { data: profile } = await (supabase
@@ -197,37 +184,67 @@ async function executeSendEmail(userId: string, params: SendEmailParams): Promis
 
     const emailSignature = profile?.email_signature || '';
 
-    // Decrypt credentials
-    const credentials = integration.credentials as { email: string; app_password: string };
-    const decryptedPassword = decrypt(credentials.app_password);
-
-    // Create transporter with user's credentials
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: credentials.email,
-        pass: decryptedPassword,
-      },
-    });
-
-    // Generate HTML and plain text versions
+    // Generate email content
     const htmlBody = generateEmailHTML(params.body, emailSignature);
     const textBody = generateEmailText(params.body, emailSignature);
 
-    // Send email with HTML and plain text versions
-    const info = await transporter.sendMail({
-      from: credentials.email,
-      to: params.to,
-      subject: params.subject,
-      text: textBody,
-      html: htmlBody,
+    // Create RFC 822 formatted email (MIME)
+    const boundary = `boundary_${Date.now()}`;
+    const emailLines = [
+      `To: ${params.to}`,
+      `Subject: ${params.subject}`,
+      'MIME-Version: 1.0',
+      `Content-Type: multipart/alternative; boundary="${boundary}"`,
+      '',
+      `--${boundary}`,
+      'Content-Type: text/plain; charset="UTF-8"',
+      '',
+      textBody,
+      '',
+      `--${boundary}`,
+      'Content-Type: text/html; charset="UTF-8"',
+      '',
+      htmlBody,
+      '',
+      `--${boundary}--`,
+    ];
+
+    const rawEmail = emailLines.join('\r\n');
+    // Base64 URL-safe encode
+    const encodedEmail = Buffer.from(rawEmail)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    // Send via Gmail API
+    const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ raw: encodedEmail }),
     });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Gmail API error: ${error.error?.message || 'Failed to send'}`);
+    }
 
     return {
       success: true,
       response: `Email sent successfully to ${params.to}`,
     };
   } catch (error: any) {
+    // Provide helpful error message if Gmail not connected
+    if (error.message.includes('not connected')) {
+      return {
+        success: false,
+        error: 'Gmail not connected. Please connect Google in Settings → Integrations.',
+      };
+    }
+
     return {
       success: false,
       error: error.message || 'Failed to send email',
