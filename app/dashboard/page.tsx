@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase-browser'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { CheckSquare, Clock, CheckCircle2, Mic, ArrowRight, FileText, Folder } from 'lucide-react'
+import { CheckSquare, Clock, CheckCircle2, Mic, ArrowRight, FileText, Folder, Plus } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 interface DashboardStats {
@@ -166,18 +166,19 @@ export default function DashboardPage() {
             <Link href="/voice" className="w-full sm:w-auto">
               <Button className="w-full sm:w-auto text-sm">
                 <Mic className="w-4 h-4 mr-2" />
-                Use Voice Assistant
+                Voice Assistant
               </Button>
             </Link>
-            <Link href="/dashboard/tasks" className="w-full sm:w-auto">
+            <Link href="/dashboard/tasks?add=true" className="w-full sm:w-auto">
               <Button variant="secondary" className="w-full sm:w-auto text-sm">
-                <CheckSquare className="w-4 h-4 mr-2" />
-                View Tasks
+                <Plus className="w-4 h-4 mr-2" />
+                Add Task
               </Button>
             </Link>
-            <Link href="/dashboard/integrations" className="w-full sm:w-auto">
+            <Link href="/dashboard/notes?add=true" className="w-full sm:w-auto">
               <Button variant="secondary" className="w-full sm:w-auto text-sm">
-                Connect Email
+                <Plus className="w-4 h-4 mr-2" />
+                Add Note
               </Button>
             </Link>
           </div>
@@ -220,7 +221,7 @@ export default function DashboardPage() {
                   <div className="flex-1 min-w-0">
                     <h3 className="text-white font-medium text-sm sm:text-base truncate mb-1.5 sm:mb-0">{task.title}</h3>
                     <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                      <Badge variant={task.priority} className="text-[10px] sm:text-xs">{task.priority}</Badge>
+                      <Badge variant={task.priority} className="text-[10px] sm:text-xs">{task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}</Badge>
                       <Badge variant={task.status} className="text-[10px] sm:text-xs">
                         {task.status.replace('_', ' ')}
                       </Badge>

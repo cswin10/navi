@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -21,6 +21,7 @@ interface Note {
 
 export default function NotesPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [notes, setNotes] = useState<Note[]>([])
   const [filteredNotes, setFilteredNotes] = useState<Note[]>([])
@@ -42,6 +43,14 @@ export default function NotesPage() {
   useEffect(() => {
     filterNotes()
   }, [notes, selectedFolder, searchQuery])
+
+  // Check for ?add=true to auto-open modal
+  useEffect(() => {
+    if (searchParams.get('add') === 'true') {
+      setShowCreateModal(true)
+      router.replace('/dashboard/notes')
+    }
+  }, [searchParams, router])
 
   async function loadNotes() {
     try {

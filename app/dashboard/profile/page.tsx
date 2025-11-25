@@ -19,6 +19,80 @@ interface UserProfile {
   created_at: string
 }
 
+interface KnowledgeSections {
+  people: string
+  location: string
+  schedule: string
+  projects: string
+  preferences: string
+  goals: string
+  other: string
+}
+
+function parseKnowledgeBase(kb: string): KnowledgeSections {
+  const sections: KnowledgeSections = {
+    people: '',
+    location: '',
+    schedule: '',
+    projects: '',
+    preferences: '',
+    goals: '',
+    other: '',
+  }
+
+  if (!kb) return sections
+
+  // Parse markdown-style sections
+  const sectionRegex = /## (People|Location|Schedule|Projects|Preferences|Goals|Other)\n([\s\S]*?)(?=\n## |$)/gi
+  let match
+  let usedContent = ''
+
+  while ((match = sectionRegex.exec(kb)) !== null) {
+    const sectionName = match[1].toLowerCase() as keyof KnowledgeSections
+    const content = match[2].trim()
+    if (sections.hasOwnProperty(sectionName)) {
+      sections[sectionName] = content
+      usedContent += match[0]
+    }
+  }
+
+  // Any content not in a section goes to "other"
+  const remainingContent = kb.replace(sectionRegex, '').trim()
+  if (remainingContent && !sections.other) {
+    sections.other = remainingContent
+  }
+
+  return sections
+}
+
+function buildKnowledgeBase(sections: KnowledgeSections): string {
+  const parts: string[] = []
+
+  if (sections.people.trim()) {
+    parts.push(`## People\n${sections.people.trim()}`)
+  }
+  if (sections.location.trim()) {
+    parts.push(`## Location\n${sections.location.trim()}`)
+  }
+  if (sections.schedule.trim()) {
+    parts.push(`## Schedule\n${sections.schedule.trim()}`)
+  }
+  if (sections.projects.trim()) {
+    parts.push(`## Projects\n${sections.projects.trim()}`)
+  }
+  if (sections.preferences.trim()) {
+    parts.push(`## Preferences\n${sections.preferences.trim()}`)
+  }
+  if (sections.goals.trim()) {
+    parts.push(`## Goals\n${sections.goals.trim()}`)
+  }
+  if (sections.other.trim()) {
+    parts.push(`## Other\n${sections.other.trim()}`)
+  }
+
+  return parts.join('\n\n')
+}
+
 export default function ProfilePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -27,7 +101,15 @@ export default function ProfilePage() {
 
   // Form state
   const [name, setName] = useState('')
-  const [knowledgeBase, setKnowledgeBase] = useState('')
+  const [knowledgeSections, setKnowledgeSections] = useState<KnowledgeSections>({
+    people: '',
+    location: '',
+    schedule: '',
+    projects: '',
+    preferences: '',
+    goals: '',
+    other: '',
+  })
   const [emailSignature, setEmailSignature] = useState('')
 
   // Toast state
@@ -55,11 +137,15 @@ export default function ProfilePage() {
     if (data) {
       setProfile(data)
       setName(data.name || '')
-      setKnowledgeBase(data.knowledge_base || '')
+      setKnowledgeSections(parseKnowledgeBase(data.knowledge_base || ''))
       setEmailSignature(data.email_signature || '')
     }
 
     setLoading(false)
+  }
+
+  function updateSection(section: keyof KnowledgeSections, value: string) {
+    setKnowledgeSections(prev => ({ ...prev, [section]: value }))
   }
 
   async function handleSaveProfile() {
@@ -69,6 +155,7 @@ export default function ProfilePage() {
 
     try {
       const supabase = createClient()
+      const knowledgeBase = buildKnowledgeBase(knowledgeSections)
       const { error } = await (supabase
         .from('user_profiles') as any)
         .update({
@@ -151,96 +238,134 @@ export default function ProfilePage() {
             <div>
               <CardTitle>What Navi Should Know About You</CardTitle>
               <CardDescription>
-                Add any information you want Navi to remember. The more she knows, the better she can help!
+                Fill in as much or as little as you like. Say "Remember that..." to add info via voice!
               </CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* How to add information */}
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 text-sm text-slate-300">
-            <p className="font-medium text-white mb-2">Two ways to teach Navi:</p>
-            <div className="space-y-2">
-              <div className="flex items-start gap-2">
-                <span className="text-blue-400 font-bold">1.</span>
-                <div>
-                  <p className="font-medium text-white">Type it here</p>
-                  <p className="text-slate-400">Write or paste any information in the box below</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-blue-400 font-bold">2.</span>
-                <div>
-                  <p className="font-medium text-white">Tell Navi directly</p>
-                  <p className="text-slate-400">Say "Remember that..." and she'll add it automatically</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Examples of what to include */}
-          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 sm:p-4 text-sm">
-            <p className="font-medium text-white mb-2">What to include:</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 text-slate-300">
-              <div>
-                <p className="text-green-400 font-medium text-xs sm:text-sm mb-0.5 sm:mb-1">👥 People</p>
-                <p className="text-[10px] sm:text-xs">Contacts, family, colleagues</p>
-              </div>
-              <div>
-                <p className="text-green-400 font-medium text-xs sm:text-sm mb-0.5 sm:mb-1">📍 Location</p>
-                <p className="text-[10px] sm:text-xs">Where you're based, timezone</p>
-              </div>
-              <div>
-                <p className="text-green-400 font-medium text-xs sm:text-sm mb-0.5 sm:mb-1">📅 Schedule</p>
-                <p className="text-[10px] sm:text-xs">Work hours, recurring meetings</p>
-              </div>
-              <div>
-                <p className="text-green-400 font-medium text-xs sm:text-sm mb-0.5 sm:mb-1">💼 Projects</p>
-                <p className="text-[10px] sm:text-xs">Current work, deadlines</p>
-              </div>
-              <div>
-                <p className="text-green-400 font-medium text-xs sm:text-sm mb-0.5 sm:mb-1">⚙️ Preferences</p>
-                <p className="text-[10px] sm:text-xs">How you like things done</p>
-              </div>
-              <div>
-                <p className="text-green-400 font-medium text-xs sm:text-sm mb-0.5 sm:mb-1">🎯 Goals</p>
-                <p className="text-[10px] sm:text-xs">What you're working towards</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Text area */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-slate-300">
-                Your Information
-              </label>
-              <span className="text-xs text-slate-500">
-                {knowledgeBase.length} characters
-              </span>
+        <CardContent className="space-y-6">
+          {/* People Section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">👥</span>
+              <label className="text-sm font-medium text-white">People</label>
+              <span className="text-xs text-slate-500">Contacts, family, colleagues</span>
             </div>
             <textarea
-              value={knowledgeBase}
-              onChange={(e) => setKnowledgeBase(e.target.value)}
-              placeholder="Write anything Navi should know about you. Examples:
-
-I'm based in London and work 9am-5pm GMT.
-
-My manager is Sarah (sarah@company.com). Always CC her on important client emails.
-
-I have a team standup every Monday at 10am.
-
-Current projects:
-- Website redesign (deadline: March 15)
-- Q1 marketing campaign
-
-I prefer morning meetings and don't schedule anything during lunch (1-2pm)."
-              rows={12}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+              value={knowledgeSections.people}
+              onChange={(e) => updateSection('people', e.target.value)}
+              placeholder="My manager is Sarah (sarah@company.com)
+John handles client accounts
+My wife Emma's birthday is March 15"
+              rows={3}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
             />
-            <p className="text-xs text-slate-400 mt-2 italic">
-              💡 Tip: The more you tell Navi, the more helpful she becomes!
-            </p>
+          </div>
+
+          {/* Location Section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📍</span>
+              <label className="text-sm font-medium text-white">Location</label>
+              <span className="text-xs text-slate-500">Where you're based, timezone</span>
+            </div>
+            <textarea
+              value={knowledgeSections.location}
+              onChange={(e) => updateSection('location', e.target.value)}
+              placeholder="Based in London, UK
+Timezone: GMT/BST
+Office at 123 Main Street"
+              rows={2}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
+            />
+          </div>
+
+          {/* Schedule Section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📅</span>
+              <label className="text-sm font-medium text-white">Schedule</label>
+              <span className="text-xs text-slate-500">Work hours, recurring meetings</span>
+            </div>
+            <textarea
+              value={knowledgeSections.schedule}
+              onChange={(e) => updateSection('schedule', e.target.value)}
+              placeholder="Work hours: 9am-5pm
+Team standup every Monday at 10am
+Lunch break: 1-2pm (don't schedule meetings)"
+              rows={3}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
+            />
+          </div>
+
+          {/* Projects Section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">💼</span>
+              <label className="text-sm font-medium text-white">Projects</label>
+              <span className="text-xs text-slate-500">Current work, deadlines</span>
+            </div>
+            <textarea
+              value={knowledgeSections.projects}
+              onChange={(e) => updateSection('projects', e.target.value)}
+              placeholder="Website redesign - deadline March 15
+Q1 marketing campaign - ongoing
+Client proposal for Acme Corp"
+              rows={3}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
+            />
+          </div>
+
+          {/* Preferences Section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">⚙️</span>
+              <label className="text-sm font-medium text-white">Preferences</label>
+              <span className="text-xs text-slate-500">How you like things done</span>
+            </div>
+            <textarea
+              value={knowledgeSections.preferences}
+              onChange={(e) => updateSection('preferences', e.target.value)}
+              placeholder="Prefer morning meetings
+Keep emails concise and professional
+Always CC manager on client communications"
+              rows={3}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
+            />
+          </div>
+
+          {/* Goals Section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🎯</span>
+              <label className="text-sm font-medium text-white">Goals</label>
+              <span className="text-xs text-slate-500">What you're working towards</span>
+            </div>
+            <textarea
+              value={knowledgeSections.goals}
+              onChange={(e) => updateSection('goals', e.target.value)}
+              placeholder="Complete project certification by Q2
+Read 2 books per month
+Exercise 3 times per week"
+              rows={3}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
+            />
+          </div>
+
+          {/* Other Section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📝</span>
+              <label className="text-sm font-medium text-white">Other</label>
+              <span className="text-xs text-slate-500">Anything else Navi should know</span>
+            </div>
+            <textarea
+              value={knowledgeSections.other}
+              onChange={(e) => updateSection('other', e.target.value)}
+              placeholder="Any other information..."
+              rows={3}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none text-sm"
+            />
           </div>
         </CardContent>
       </Card>

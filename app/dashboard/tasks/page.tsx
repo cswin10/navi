@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -31,6 +31,7 @@ const statusConfig = {
 
 export default function TasksPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -46,6 +47,15 @@ export default function TasksPage() {
   useEffect(() => {
     loadTasks()
   }, [])
+
+  // Check for ?add=true to auto-open modal
+  useEffect(() => {
+    if (searchParams.get('add') === 'true') {
+      setShowAddModal(true)
+      // Clear the query param
+      router.replace('/dashboard/tasks')
+    }
+  }, [searchParams, router])
 
   async function loadTasks() {
     const supabase = createClient()
@@ -69,8 +79,12 @@ export default function TasksPage() {
     setLoading(false)
   }
 
+  const priorityOrder = { high: 0, medium: 1, low: 2 }
+
   function getTasksByStatus(status: TaskStatus) {
-    return tasks.filter(task => task.status === status)
+    return tasks
+      .filter(task => task.status === status)
+      .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
   }
 
   function handleDragStart(task: Task) {
@@ -260,7 +274,7 @@ export default function TasksPage() {
                     )}
 
                     <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                      <Badge variant={task.priority} className="text-[10px] sm:text-xs">{task.priority}</Badge>
+                      <Badge variant={task.priority} className="text-[10px] sm:text-xs">{task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}</Badge>
                       {task.due_date && (
                         <div className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-400">
                           <Calendar className="w-3 h-3" />
