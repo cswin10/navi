@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, SendEmailParams, RememberParams, GetWeatherParams, GetNewsParams, AddCalendarEventParams, GetCalendarEventsParams, TimeblockDayParams, CreateNoteParams } from '@/lib/types';
+import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, GetTasksParams, SendEmailParams, RememberParams, GetWeatherParams, GetNewsParams, AddCalendarEventParams, GetCalendarEventsParams, TimeblockDayParams, CreateNoteParams } from '@/lib/types';
 import { getCurrentUser, createClient } from '@/lib/auth';
 import { getGoogleCalendarToken, getGmailToken, parseTimeToISO } from '@/lib/google-calendar';
 import { generateEmailHTML, generateEmailText } from '@/lib/email-template';
@@ -66,6 +66,10 @@ export async function POST(request: NextRequest) {
     switch (intent.intent) {
       case 'create_task':
         result = await executeCreateTask(user.id, intent.parameters as CreateTaskParams);
+        break;
+
+      case 'get_tasks':
+        result = await executeGetTasks(user.id, intent.parameters as GetTasksParams);
         break;
 
       case 'send_email':
@@ -161,6 +165,68 @@ async function executeCreateTask(userId: string, params: CreateTaskParams): Prom
     return {
       success: false,
       error: error.message || 'Failed to create task',
+    };
+  }
+}
+
+/**
+ * Get tasks from Navi AI database
+ */
+async function executeGetTasks(userId: string, params: GetTasksParams): Promise<ExecutionResult> {
+  try {
+    const supabase = await createClient();
+
+    // Build query based on params
+    let query = (supabase
+      .from('tasks') as any)
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    // Filter by status (default to 'todo' if not specified)
+    const status = params.status || 'todo';
+    if (status !== 'all') {
+      query = query.eq('status', status);
+    }
+
+    // Filter by priority if specified
+    if (params.priority) {
+      query = query.eq('priority', params.priority);
+    }
+
+    const { data: tasks, error } = await query;
+
+    if (error) {
+      throw new Error(`Database error: ${error.message}`);
+    }
+
+    if (!tasks || tasks.length === 0) {
+      const statusText = status === 'all' ? '' : ` with status "${status}"`;
+      return {
+        success: true,
+        response: `You don't have any tasks${statusText}.`,
+      };
+    }
+
+    // Format tasks for response
+    const taskList = tasks.map((task: any) => {
+      const priorityEmoji = task.priority === 'high' ? '🔴' : task.priority === 'medium' ? '🟡' : '🟢';
+      const dueText = task.due_date ? ` (Due: ${new Date(task.due_date).toLocaleDateString('en-GB')})` : '';
+      return `${priorityEmoji} ${task.title}${dueText}`;
+    }).join('\n');
+
+    const statusText = status === 'all' ? '' : ` (${status})`;
+    const spokenCount = tasks.length === 1 ? '1 task' : `${tasks.length} tasks`;
+
+    return {
+      success: true,
+      displayResponse: `You have ${tasks.length} task${tasks.length > 1 ? 's' : ''}${statusText}:\n\n${taskList}`,
+      spokenResponse: `You have ${spokenCount}.`,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || 'Failed to get tasks',
     };
   }
 }

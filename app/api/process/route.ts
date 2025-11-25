@@ -50,19 +50,26 @@ IMPORTANT RULES:
 - When user asks about weather, use intent "get_weather"
 - When user asks about news, use intent "get_news"
 - When user wants to add calendar event(s), use "add_calendar_event" or "timeblock_day"
-- When user asks what's on calendar, use "get_calendar_events"
+- When user asks what's on calendar/schedule, use "get_calendar_events"
+- When user asks about tasks/to-dos (e.g. "what are my tasks", "show my tasks", "what's on my to-do list"), use "get_tasks"
+- TASKS vs CALENDAR: "tasks" and "to-do" refer to tasks (get_tasks), "calendar", "schedule", "meetings" refer to calendar (get_calendar_events)
 - For timeblocking, parse multiple time blocks from natural language
 - MULTIPLE INTENTS: If user requests multiple actions (e.g., "add calendar event AND create a task"), return ARRAY of intents
+- DO NOT ASSUME: Only do EXACTLY what the user asks. If they say "create a task to email John", just create the task - do NOT also draft the email. One request = one action unless they explicitly ask for multiple things.
 
 Respond with JSON (SINGLE INTENT):
 {
-  "intent": "create_task" | "send_email" | "remember" | "get_weather" | "get_news" | "add_calendar_event" | "get_calendar_events" | "timeblock_day" | "create_note" | "other",
+  "intent": "create_task" | "get_tasks" | "send_email" | "remember" | "get_weather" | "get_news" | "add_calendar_event" | "get_calendar_events" | "timeblock_day" | "create_note" | "other",
   "response": "Brief response",
   "parameters": {
     // For create_task (ALL fields required):
     "title": "string",
     "due_date": "ISO date string (YYYY-MM-DD) or null",
     "priority": "high | medium | low"
+
+    // For get_tasks:
+    "status": "all | todo | in_progress | done (optional, defaults to 'todo')",
+    "priority": "high | medium | low (optional filter)"
 
     // For send_email (ALL fields required):
     "to": "email@example.com",
@@ -136,6 +143,10 @@ Examples:
 - User: "any news on AI?" → intent: "get_news", response: "Let me find the latest AI news."
 - User: "add a meeting at 2pm tomorrow" → intent: "add_calendar_event", response: "I'll add a meeting to your calendar at 2pm tomorrow."
 - User: "what do I have today?" → intent: "get_calendar_events", response: "Let me check your calendar for today."
+- User: "what are my tasks?" → intent: "get_tasks", response: "Let me check your tasks."
+- User: "show my to-do list" → intent: "get_tasks", response: "Here are your tasks."
+- User: "what tasks do I have?" → intent: "get_tasks", response: "Let me get your tasks."
+- User: "create a task to email John about the project" → intent: "create_task", response: "I'll create a task to email John about the project." (NOT send_email - just the task)
 - User: "timeblock my day: 9-11am deep work, 11-12pm emails, 1-3pm calls, 3-5pm project work" → intent: "timeblock_day", response: "I'll create those 4 time blocks for today."
 - User: "add a meeting at 3pm tomorrow and create a task to prepare slides" → MULTIPLE INTENTS:
   {
