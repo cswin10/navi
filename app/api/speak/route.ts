@@ -11,7 +11,7 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 // - shimmer: female, expressive (American)
 // - fable: British accent (neutral/narrative style)
 // - alloy: neutral
-const VOICE = 'fable'; // British accent
+const VOICE = 'nova'; // Female, warm
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
         input: formattedText,
         voice: VOICE,
         response_format: 'mp3',
-        speed: 1.0, // 0.25 to 4.0
+        speed: 1.15, // Slightly faster for snappier responses
       }),
     });
 
