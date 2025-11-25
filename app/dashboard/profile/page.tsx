@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Toast } from '@/components/ui/Toast'
-import { User, Brain, Save, Plus, Trash2 } from 'lucide-react'
+import { User, Brain, Save, Plus, Trash2, Check } from 'lucide-react'
 
 interface UserProfile {
   id: string
@@ -135,6 +135,7 @@ export default function ProfilePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
   const [profile, setProfile] = useState<UserProfile | null>(null)
 
   // Form state
@@ -249,6 +250,8 @@ export default function ProfilePage() {
       }
 
       setToast({ message: 'Changes saved successfully!', type: 'success' })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
       await loadProfile()
     } catch (error: any) {
       setToast({ message: `Failed to save changes: ${error.message}`, type: 'error' })
@@ -266,7 +269,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 lg:space-y-8">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8 pb-20">
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-1 sm:mb-2">Profile</h1>
@@ -276,13 +279,13 @@ export default function ProfilePage() {
       {/* Basic Information */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
               <User className="w-5 h-5 text-blue-400" />
             </div>
-            <div>
-              <CardTitle>Basic Information</CardTitle>
-              <CardDescription>Update your personal details</CardDescription>
+            <div className="min-w-0">
+              <CardTitle className="text-base sm:text-lg">Basic Information</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Update your personal details</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -309,14 +312,14 @@ export default function ProfilePage() {
       {/* What Navi Should Know */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
               <Brain className="w-5 h-5 text-purple-400" />
             </div>
-            <div>
-              <CardTitle>What Navi Should Know About You</CardTitle>
-              <CardDescription>
-                Fill in as much or as little as you like. Say "Remember that..." to add info via voice!
+            <div className="min-w-0">
+              <CardTitle className="text-base sm:text-lg">What Navi Should Know About You</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                Fill in as much or as little as you like. Say &quot;Remember that...&quot; to add info via voice!
               </CardDescription>
             </div>
           </div>
@@ -324,13 +327,15 @@ export default function ProfilePage() {
         <CardContent className="space-y-6">
           {/* People Section */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">👥</span>
-                <label className="text-sm font-medium text-white">People</label>
-                <span className="text-xs text-slate-500">Contacts, family, colleagues</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">👥</span>
+                  <label className="text-sm font-medium text-white">People</label>
+                </div>
+                <span className="text-xs text-slate-500 ml-6 sm:ml-0">Contacts, family, colleagues</span>
               </div>
-              <Button variant="ghost" size="sm" onClick={addPerson} className="text-purple-400 hover:text-purple-300">
+              <Button variant="ghost" size="sm" onClick={addPerson} className="text-purple-400 hover:text-purple-300 self-start sm:self-auto">
                 <Plus className="w-4 h-4 mr-1" />
                 Add Person
               </Button>
@@ -340,36 +345,38 @@ export default function ProfilePage() {
             ) : (
               <div className="space-y-3">
                 {knowledgeSections.people.map((person, index) => (
-                  <div key={index} className="flex gap-2 items-start bg-slate-800/50 p-3 rounded-lg border border-slate-700">
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <input
-                        type="text"
-                        value={person.name}
-                        onChange={(e) => updatePerson(index, 'name', e.target.value)}
-                        placeholder="Name"
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                      />
-                      <input
-                        type="text"
-                        value={person.relationship}
-                        onChange={(e) => updatePerson(index, 'relationship', e.target.value)}
-                        placeholder="Relationship (e.g. Manager, Wife)"
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                      />
-                      <input
-                        type="email"
-                        value={person.email}
-                        onChange={(e) => updatePerson(index, 'email', e.target.value)}
-                        placeholder="Email (optional)"
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                      />
+                  <div key={index} className="bg-slate-800/50 p-3 sm:p-4 rounded-lg border border-slate-700">
+                    <div className="flex gap-2 items-start">
+                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+                        <input
+                          type="text"
+                          value={person.name}
+                          onChange={(e) => updatePerson(index, 'name', e.target.value)}
+                          placeholder="Name"
+                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        />
+                        <input
+                          type="text"
+                          value={person.relationship}
+                          onChange={(e) => updatePerson(index, 'relationship', e.target.value)}
+                          placeholder="Relationship"
+                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        />
+                        <input
+                          type="email"
+                          value={person.email}
+                          onChange={(e) => updatePerson(index, 'email', e.target.value)}
+                          placeholder="Email (optional)"
+                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        />
+                      </div>
+                      <button
+                        onClick={() => removePerson(index)}
+                        className="p-2 text-slate-400 hover:text-red-400 transition-colors flex-shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => removePerson(index)}
-                      className="p-2 text-slate-400 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
                 ))}
               </div>
@@ -378,13 +385,15 @@ export default function ProfilePage() {
 
           {/* Location Section */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">📍</span>
-                <label className="text-sm font-medium text-white">Location</label>
-                <span className="text-xs text-slate-500">Where you're based, timezone</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">📍</span>
+                  <label className="text-sm font-medium text-white">Location</label>
+                </div>
+                <span className="text-xs text-slate-500 ml-6 sm:ml-0">Where you're based, timezone</span>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => addSectionItem('location')} className="text-purple-400 hover:text-purple-300">
+              <Button variant="ghost" size="sm" onClick={() => addSectionItem('location')} className="text-purple-400 hover:text-purple-300 self-start sm:self-auto">
                 <Plus className="w-4 h-4 mr-1" />
                 Add
               </Button>
@@ -416,13 +425,15 @@ export default function ProfilePage() {
 
           {/* Schedule Section */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">📅</span>
-                <label className="text-sm font-medium text-white">Schedule</label>
-                <span className="text-xs text-slate-500">Work hours, recurring meetings</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">📅</span>
+                  <label className="text-sm font-medium text-white">Schedule</label>
+                </div>
+                <span className="text-xs text-slate-500 ml-6 sm:ml-0">Work hours, recurring meetings</span>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => addSectionItem('schedule')} className="text-purple-400 hover:text-purple-300">
+              <Button variant="ghost" size="sm" onClick={() => addSectionItem('schedule')} className="text-purple-400 hover:text-purple-300 self-start sm:self-auto">
                 <Plus className="w-4 h-4 mr-1" />
                 Add
               </Button>
@@ -454,13 +465,15 @@ export default function ProfilePage() {
 
           {/* Projects Section */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">💼</span>
-                <label className="text-sm font-medium text-white">Projects</label>
-                <span className="text-xs text-slate-500">Current work, deadlines</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">💼</span>
+                  <label className="text-sm font-medium text-white">Projects</label>
+                </div>
+                <span className="text-xs text-slate-500 ml-6 sm:ml-0">Current work, deadlines</span>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => addSectionItem('projects')} className="text-purple-400 hover:text-purple-300">
+              <Button variant="ghost" size="sm" onClick={() => addSectionItem('projects')} className="text-purple-400 hover:text-purple-300 self-start sm:self-auto">
                 <Plus className="w-4 h-4 mr-1" />
                 Add
               </Button>
@@ -492,13 +505,15 @@ export default function ProfilePage() {
 
           {/* Preferences Section */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">⚙️</span>
-                <label className="text-sm font-medium text-white">Preferences</label>
-                <span className="text-xs text-slate-500">How you like things done</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">⚙️</span>
+                  <label className="text-sm font-medium text-white">Preferences</label>
+                </div>
+                <span className="text-xs text-slate-500 ml-6 sm:ml-0">How you like things done</span>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => addSectionItem('preferences')} className="text-purple-400 hover:text-purple-300">
+              <Button variant="ghost" size="sm" onClick={() => addSectionItem('preferences')} className="text-purple-400 hover:text-purple-300 self-start sm:self-auto">
                 <Plus className="w-4 h-4 mr-1" />
                 Add
               </Button>
@@ -530,13 +545,15 @@ export default function ProfilePage() {
 
           {/* Goals Section */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">🎯</span>
-                <label className="text-sm font-medium text-white">Goals</label>
-                <span className="text-xs text-slate-500">What you're working towards</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🎯</span>
+                  <label className="text-sm font-medium text-white">Goals</label>
+                </div>
+                <span className="text-xs text-slate-500 ml-6 sm:ml-0">What you're working towards</span>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => addSectionItem('goals')} className="text-purple-400 hover:text-purple-300">
+              <Button variant="ghost" size="sm" onClick={() => addSectionItem('goals')} className="text-purple-400 hover:text-purple-300 self-start sm:self-auto">
                 <Plus className="w-4 h-4 mr-1" />
                 Add
               </Button>
@@ -568,13 +585,15 @@ export default function ProfilePage() {
 
           {/* Other Section */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">📝</span>
-                <label className="text-sm font-medium text-white">Other</label>
-                <span className="text-xs text-slate-500">Anything else Navi should know</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">📝</span>
+                  <label className="text-sm font-medium text-white">Other</label>
+                </div>
+                <span className="text-xs text-slate-500 ml-6 sm:ml-0">Anything else Navi should know</span>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => addSectionItem('other')} className="text-purple-400 hover:text-purple-300">
+              <Button variant="ghost" size="sm" onClick={() => addSectionItem('other')} className="text-purple-400 hover:text-purple-300 self-start sm:self-auto">
                 <Plus className="w-4 h-4 mr-1" />
                 Add
               </Button>
@@ -609,13 +628,13 @@ export default function ProfilePage() {
       {/* Email Signature */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">✍️</span>
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span className="text-xl sm:text-2xl">✍️</span>
             </div>
-            <div>
-              <CardTitle>Email Signature</CardTitle>
-              <CardDescription>
+            <div className="min-w-0">
+              <CardTitle className="text-base sm:text-lg">Email Signature</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 Add a signature to emails sent by Navi (optional)
               </CardDescription>
             </div>
@@ -653,16 +672,34 @@ john@company.com
       </Card>
 
       {/* Sticky Save Button */}
-      <div className="sticky bottom-4 z-10 flex justify-center sm:justify-end">
-        <div className="bg-slate-900/95 backdrop-blur-sm border border-slate-700 rounded-lg p-3 shadow-lg">
+      <div className="sticky bottom-4 z-10 flex justify-center sm:justify-end px-4 sm:px-0">
+        <div className={`backdrop-blur-sm border rounded-xl p-3 shadow-2xl transition-all duration-300 ${
+          saved
+            ? 'bg-green-600/95 border-green-500'
+            : 'bg-slate-900/95 border-slate-700'
+        }`}>
           <Button
             onClick={handleSaveProfile}
             isLoading={saving}
-            disabled={saving}
-            className="min-w-40 text-base"
+            disabled={saving || saved}
+            variant={saved ? 'secondary' : 'primary'}
+            className={`min-w-[160px] text-base font-semibold transition-all duration-300 ${
+              saved ? 'bg-green-600 hover:bg-green-600 text-white border-green-500' : ''
+            }`}
           >
-            <Save className="w-5 h-5 mr-2" />
-            {saving ? 'Saving...' : 'Save Changes'}
+            {saved ? (
+              <>
+                <Check className="w-5 h-5 mr-2" />
+                Saved!
+              </>
+            ) : saving ? (
+              'Saving...'
+            ) : (
+              <>
+                <Save className="w-5 h-5 mr-2" />
+                Save Changes
+              </>
+            )}
           </Button>
         </div>
       </div>
