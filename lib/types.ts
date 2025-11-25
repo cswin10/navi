@@ -1,5 +1,5 @@
 // Core intent types
-export type IntentType = 'create_task' | 'get_tasks' | 'send_email' | 'remember' | 'get_weather' | 'get_news' | 'add_calendar_event' | 'get_calendar_events' | 'timeblock_day' | 'create_note' | 'other';
+export type IntentType = 'create_task' | 'get_tasks' | 'update_task' | 'send_email' | 'remember' | 'get_weather' | 'get_news' | 'add_calendar_event' | 'get_calendar_events' | 'timeblock_day' | 'create_note' | 'get_notes' | 'other';
 
 export type Priority = 'high' | 'medium' | 'low';
 
@@ -49,6 +49,17 @@ export interface GetTasksParams {
   priority?: Priority; // Optional filter by priority
 }
 
+export interface UpdateTaskParams {
+  title: string; // Title to search for (fuzzy match)
+  status?: 'todo' | 'in_progress' | 'done'; // New status
+  priority?: Priority; // New priority
+}
+
+export interface GetNotesParams {
+  query?: string; // Search query (searches title and content)
+  folder?: string; // Filter by folder
+}
+
 export interface TimeblockDayParams {
   date?: string; // 'today', 'tomorrow', or ISO date (defaults to today)
   blocks: Array<{
@@ -65,7 +76,7 @@ export interface CreateNoteParams {
   folder?: string; // Optional folder name
 }
 
-export type IntentParams = CreateTaskParams | GetTasksParams | SendEmailParams | RememberParams | GetWeatherParams | GetNewsParams | AddCalendarEventParams | GetCalendarEventsParams | TimeblockDayParams | CreateNoteParams | Record<string, unknown>;
+export type IntentParams = CreateTaskParams | GetTasksParams | UpdateTaskParams | SendEmailParams | RememberParams | GetWeatherParams | GetNewsParams | AddCalendarEventParams | GetCalendarEventsParams | TimeblockDayParams | CreateNoteParams | GetNotesParams | Record<string, unknown>;
 
 // Claude API Response (single intent)
 export interface ClaudeIntentResponse {

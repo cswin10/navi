@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, GetTasksParams, SendEmailParams, RememberParams, GetWeatherParams, GetNewsParams, AddCalendarEventParams, GetCalendarEventsParams, TimeblockDayParams, CreateNoteParams } from '@/lib/types';
+import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, GetTasksParams, UpdateTaskParams, SendEmailParams, RememberParams, GetWeatherParams, GetNewsParams, AddCalendarEventParams, GetCalendarEventsParams, TimeblockDayParams, CreateNoteParams, GetNotesParams } from '@/lib/types';
 import { getCurrentUser, createClient } from '@/lib/auth';
 import { getGoogleCalendarToken, getGmailToken, parseTimeToISO } from '@/lib/google-calendar';
 import { generateEmailHTML, generateEmailText } from '@/lib/email-template';
@@ -72,6 +72,10 @@ export async function POST(request: NextRequest) {
         result = await executeGetTasks(user.id, intent.parameters as GetTasksParams);
         break;
 
+      case 'update_task':
+        result = await executeUpdateTask(user.id, intent.parameters as UpdateTaskParams);
+        break;
+
       case 'send_email':
         result = await executeSendEmail(user.id, intent.parameters as SendEmailParams);
         break;
@@ -102,6 +106,10 @@ export async function POST(request: NextRequest) {
 
       case 'create_note':
         result = await executeCreateNote(user.id, intent.parameters as CreateNoteParams);
+        break;
+
+      case 'get_notes':
+        result = await executeGetNotes(user.id, intent.parameters as GetNotesParams);
         break;
 
       default:
@@ -232,6 +240,114 @@ async function executeGetTasks(userId: string, params: GetTasksParams): Promise<
 }
 
 /**
+ * Update a task (e.g., mark as complete)
+ */
+async function executeUpdateTask(userId: string, params: UpdateTaskParams): Promise<ExecutionResult> {
+  try {
+    const supabase = await createClient();
+
+    // Find task by fuzzy matching title
+    const searchTerm = params.title.toLowerCase();
+
+    const { data: tasks, error: searchError } = await (supabase
+      .from('tasks') as any)
+      .select('*')
+      .eq('user_id', userId)
+      .neq('status', 'done'); // Only search non-completed tasks by default
+
+    if (searchError) {
+      throw new Error(`Database error: ${searchError.message}`);
+    }
+
+    if (!tasks || tasks.length === 0) {
+      return {
+        success: false,
+        error: `No active tasks found. Try checking your completed tasks?`,
+      };
+    }
+
+    // Find best matching task
+    const matchedTask = tasks.find((task: any) =>
+      task.title.toLowerCase().includes(searchTerm) ||
+      searchTerm.includes(task.title.toLowerCase())
+    );
+
+    if (!matchedTask) {
+      const taskTitles = tasks.slice(0, 5).map((t: any) => `• ${t.title}`).join('\n');
+      return {
+        success: false,
+        error: `I couldn't find a task matching "${params.title}". Your current tasks:\n${taskTitles}`,
+      };
+    }
+
+    // Build update object
+    const updates: any = {};
+    if (params.status) updates.status = params.status;
+    if (params.priority) updates.priority = params.priority;
+
+    if (Object.keys(updates).length === 0) {
+      return {
+        success: false,
+        error: 'No updates specified. What would you like to change?',
+      };
+    }
+
+    // Update the task
+    const { error: updateError } = await (supabase
+      .from('tasks') as any)
+      .update(updates)
+      .eq('id', matchedTask.id);
+
+    if (updateError) {
+      throw new Error(`Failed to update task: ${updateError.message}`);
+    }
+
+    // Build response
+    const statusText = params.status === 'done' ? 'completed' :
+                       params.status === 'in_progress' ? 'moved to in progress' :
+                       params.status === 'todo' ? 'moved to todo' : 'updated';
+
+    return {
+      success: true,
+      displayResponse: `Task "${matchedTask.title}" ${statusText}`,
+      spokenResponse: `Done! Task ${statusText}.`,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || 'Failed to update task',
+    };
+  }
+}
+
+/**
+ * Look up email address from knowledge base by name
+ */
+function lookupEmailFromKnowledgeBase(knowledgeBase: string, name: string): string | null {
+  if (!knowledgeBase || !name) return null;
+
+  // Normalize the name for searching
+  const searchName = name.toLowerCase().trim();
+
+  // Look for patterns like "John's email is john@example.com" or "John: john@example.com"
+  // or "john@example.com" near the name
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+  const lines = knowledgeBase.split('\n');
+
+  for (const line of lines) {
+    const lineLower = line.toLowerCase();
+    if (lineLower.includes(searchName)) {
+      const emails = line.match(emailRegex);
+      if (emails && emails.length > 0) {
+        return emails[0];
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Send an email using Gmail API (OAuth)
  */
 async function executeSendEmail(userId: string, params: SendEmailParams): Promise<ExecutionResult> {
@@ -241,14 +357,34 @@ async function executeSendEmail(userId: string, params: SendEmailParams): Promis
 
     const supabase = await createClient();
 
-    // Get user's email signature from profile
+    // Get user's profile (email signature and knowledge base for contact lookup)
     const { data: profile } = await (supabase
       .from('user_profiles') as any)
-      .select('email_signature')
+      .select('email_signature, knowledge_base')
       .eq('id', userId)
       .single();
 
     const emailSignature = profile?.email_signature || '';
+
+    // Check if "to" is an email address or a name
+    let recipientEmail = params.to;
+    let recipientName = '';
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(params.to);
+
+    if (!isEmail) {
+      // It's a name - look up from knowledge base
+      recipientName = params.to;
+      const foundEmail = lookupEmailFromKnowledgeBase(profile?.knowledge_base || '', params.to);
+
+      if (!foundEmail) {
+        return {
+          success: false,
+          error: `I couldn't find an email address for "${params.to}" in your knowledge base. Try saying "remember that ${params.to}'s email is..." first.`,
+        };
+      }
+
+      recipientEmail = foundEmail;
+    }
 
     // Generate email content
     const htmlBody = generateEmailHTML(params.body, emailSignature);
@@ -257,7 +393,7 @@ async function executeSendEmail(userId: string, params: SendEmailParams): Promis
     // Create RFC 822 formatted email (MIME)
     const boundary = `boundary_${Date.now()}`;
     const emailLines = [
-      `To: ${params.to}`,
+      `To: ${recipientEmail}`,
       `Subject: ${params.subject}`,
       'MIME-Version: 1.0',
       `Content-Type: multipart/alternative; boundary="${boundary}"`,
@@ -298,9 +434,13 @@ async function executeSendEmail(userId: string, params: SendEmailParams): Promis
       throw new Error(`Gmail API error: ${error.error?.message || 'Failed to send'}`);
     }
 
+    // Build response - mention name if contact lookup was used
+    const recipientDisplay = recipientName ? `${recipientName} (${recipientEmail})` : recipientEmail;
+
     return {
       success: true,
-      response: `Email sent successfully to ${params.to}`,
+      displayResponse: `Email sent to ${recipientDisplay}`,
+      spokenResponse: `Email sent${recipientName ? ` to ${recipientName}` : ''}.`,
     };
   } catch (error: any) {
     // Provide helpful error message if Gmail not connected
@@ -756,6 +896,87 @@ async function executeCreateNote(userId: string, params: CreateNoteParams): Prom
     return {
       success: false,
       error: error.message || 'Failed to create note',
+    };
+  }
+}
+
+/**
+ * Get/search notes from Navi AI database
+ */
+async function executeGetNotes(userId: string, params: GetNotesParams): Promise<ExecutionResult> {
+  try {
+    const supabase = await createClient();
+
+    // Get all notes first, then filter
+    let query = (supabase
+      .from('notes') as any)
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    // Filter by folder if specified
+    if (params.folder) {
+      query = query.ilike('folder', `%${params.folder}%`);
+    }
+
+    const { data: notes, error } = await query;
+
+    if (error) {
+      throw new Error(`Database error: ${error.message}`);
+    }
+
+    if (!notes || notes.length === 0) {
+      if (params.folder) {
+        return {
+          success: true,
+          response: `You don't have any notes in the "${params.folder}" folder.`,
+        };
+      }
+      return {
+        success: true,
+        response: `You don't have any notes yet.`,
+      };
+    }
+
+    // Filter by search query if specified
+    let filteredNotes = notes;
+    if (params.query) {
+      const searchTerm = params.query.toLowerCase();
+      filteredNotes = notes.filter((note: any) =>
+        note.title.toLowerCase().includes(searchTerm) ||
+        note.content.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    if (filteredNotes.length === 0) {
+      return {
+        success: true,
+        response: `I couldn't find any notes matching "${params.query}".`,
+      };
+    }
+
+    // Format notes for display
+    const noteList = filteredNotes.slice(0, 10).map((note: any) => {
+      const folderTag = note.folder ? ` [${note.folder}]` : '';
+      const preview = note.content.length > 100
+        ? note.content.substring(0, 100) + '...'
+        : note.content;
+      return `📝 **${note.title}**${folderTag}\n${preview}`;
+    }).join('\n\n');
+
+    const countText = filteredNotes.length === 1 ? '1 note' : `${filteredNotes.length} notes`;
+    const queryText = params.query ? ` about "${params.query}"` : '';
+    const folderText = params.folder ? ` in ${params.folder}` : '';
+
+    return {
+      success: true,
+      displayResponse: `Found ${countText}${queryText}${folderText}:\n\n${noteList}`,
+      spokenResponse: `You have ${countText}${queryText}${folderText}.`,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || 'Failed to get notes',
     };
   }
 }

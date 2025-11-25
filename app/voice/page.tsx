@@ -170,7 +170,7 @@ export default function VoicePage() {
 
         // Check if all intents require confirmation
         const needsConfirmation = processData.intents.some(
-          (intent: any) => !['remember', 'get_weather', 'get_news', 'get_calendar_events', 'get_tasks', 'other'].includes(intent.intent)
+          (intent: any) => !['remember', 'get_weather', 'get_news', 'get_calendar_events', 'get_tasks', 'get_notes', 'other'].includes(intent.intent)
         );
 
         if (needsConfirmation) {
@@ -208,11 +208,11 @@ export default function VoicePage() {
           }
         }
         setAppState('idle');
-      } else if (['remember', 'get_weather', 'get_news', 'get_calendar_events', 'get_tasks'].includes(processData.intent.intent)) {
-        // Auto-execute: remember, weather, news, get calendar, get tasks (no confirmation needed)
+      } else if (['remember', 'get_weather', 'get_news', 'get_calendar_events', 'get_tasks', 'get_notes'].includes(processData.intent.intent)) {
+        // Auto-execute: remember, weather, news, get calendar, get tasks, get notes (no confirmation needed)
         await handleConfirm(processData.intent);
       } else {
-        // Actions (create_task, send_email, add_calendar_event, timeblock_day): Require confirmation
+        // Actions (create_task, send_email, add_calendar_event, timeblock_day, update_task): Require confirmation
         setAppState('confirming');
       }
     } catch (error: any) {
