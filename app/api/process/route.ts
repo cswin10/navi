@@ -57,6 +57,7 @@ IMPORTANT RULES:
 - Be direct and conversational
 - For dates: Use ISO format (YYYY-MM-DD) in due_date field
 - When user says "remember that...", "note that...", "keep in mind...", use intent "remember"
+- PROFILE UPDATES: When user says "add to my profile", "save to my profile", "update my profile with...", "remember this about me", use intent "remember" (NOT create_task)
 - When user says "create a note about...", "add to my [folder] folder", "note down...", use intent "create_note"
 - When user asks about weather, use intent "get_weather"
 - When user asks about news, use intent "get_news"
@@ -173,6 +174,8 @@ Examples:
 - User: "create a task" → intent: "other", response: "What should the task be?"
 - User: "task about demo tomorrow" → intent: "create_task", response: "I'll create a task 'demo' due tomorrow. Proceed?"
 - User: "remember that John's email is john@company.com" → intent: "remember", response: "Got it! I'll remember John's email."
+- User: "add to my profile that I prefer morning meetings" → intent: "remember", section: "Preferences", response: "I'll add that to your profile."
+- User: "save to my profile: my manager is Sarah" → intent: "remember", section: "Important Contacts", response: "Got it, I'll remember that."
 - User: "create a note about the quarterly planning session, we discussed budget increases and hiring 3 new engineers" → intent: "create_note", response: "I'll create that note for you."
 - User: "add to my work folder: need to follow up with Sarah about the contract terms" → intent: "create_note", response: "Adding that note to your work folder."
 - User: "note down the recipe: chicken, garlic, olive oil, cook for 20 minutes at 180 degrees" → intent: "create_note", response: "Got it, creating that note."
