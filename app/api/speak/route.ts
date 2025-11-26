@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
           style: 0.0, // 0 = faster
           use_speaker_boost: true,
         },
+        speed: 1.15, // Slightly faster speech (1.0 is normal, range 0.25-4.0)
       }),
     });
 
