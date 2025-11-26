@@ -64,7 +64,8 @@ IMPORTANT RULES:
 - When user asks what's on calendar/schedule, use "get_calendar_events"
 - DELETE CALENDAR EVENT: When user wants to remove/delete/cancel a calendar event (e.g., "delete the meeting", "cancel my 3pm appointment", "remove the call from my calendar", "clear my day"), use "delete_calendar_event"
 - When user asks about tasks/to-dos (e.g. "what are my tasks", "show my tasks", "what's on my to-do list"), use "get_tasks"
-- TASKS vs CALENDAR: "tasks" and "to-do" refer to tasks (get_tasks), "calendar", "schedule", "meetings" refer to calendar (get_calendar_events)
+- TASKS vs CALENDAR: "tasks" and "to-do" refer to tasks (get_tasks, delete_task), "calendar", "schedule", "meetings" refer to calendar events (get_calendar_events, delete_calendar_event)
+- DELETE TASK: When user wants to delete/remove tasks (e.g., "delete all my tasks", "remove the demo task", "clear my tasks"), use "delete_task" - NOT delete_calendar_event
 - For timeblocking, parse multiple time blocks from natural language
 - MULTIPLE INTENTS: If user requests multiple actions (e.g., "add calendar event AND create a task"), return ARRAY of intents
 - DO NOT ASSUME: Only do EXACTLY what the user asks. If they say "create a task to email John", just create the task - do NOT also draft the email. One request = one action unless they explicitly ask for multiple things.
@@ -74,7 +75,7 @@ IMPORTANT RULES:
 
 Respond with JSON (SINGLE INTENT):
 {
-  "intent": "create_task" | "get_tasks" | "update_task" | "send_email" | "remember" | "get_weather" | "get_news" | "add_calendar_event" | "get_calendar_events" | "delete_calendar_event" | "timeblock_day" | "create_note" | "get_notes" | "other",
+  "intent": "create_task" | "get_tasks" | "update_task" | "delete_task" | "send_email" | "remember" | "get_weather" | "get_news" | "add_calendar_event" | "get_calendar_events" | "delete_calendar_event" | "timeblock_day" | "create_note" | "get_notes" | "other",
   "response": "Brief response",
   "parameters": {
     // For create_task (ALL fields required):
@@ -90,6 +91,11 @@ Respond with JSON (SINGLE INTENT):
     "title": "string (task title to search for)",
     "status": "todo | in_progress | done (optional, new status)",
     "priority": "high | medium | low (optional, new priority)"
+
+    // For delete_task:
+    "title": "string (optional - task title to search for)",
+    "delete_all": "boolean (true to delete all tasks - use when user says 'delete all my tasks', 'clear all tasks')",
+    "status": "todo | in_progress | done | all (optional, filter by status when deleting multiple)"
 
     // For send_email (ALL fields required):
     // NOTE: "to" can be a NAME (e.g., "John") - system will look up email from knowledge base
@@ -129,8 +135,9 @@ Respond with JSON (SINGLE INTENT):
     "timeframe": "day | week | month (optional, default: day)"
 
     // For delete_calendar_event:
-    "title": "string (event title to search for - fuzzy match)",
-    "date": "ISO date string (optional, YYYY-MM-DD - narrows search to specific day)"
+    "title": "string (optional - event title to search for)",
+    "date": "ISO date string (YYYY-MM-DD) or 'today', 'tomorrow' - REQUIRED when deleting all",
+    "delete_all": "boolean (true to delete ALL events for the date - use when user says 'clear my calendar', 'delete all events')"
 
     // For timeblock_day:
     "date": "ISO date string (optional, YYYY-MM-DD - defaults to today)",
@@ -187,6 +194,12 @@ Examples:
 - User: "cancel my 3pm meeting" → intent: "delete_calendar_event", parameters: {"title": "meeting"}
 - User: "remove the call from my calendar" → intent: "delete_calendar_event", parameters: {"title": "call"}
 - User: "clear the demo from today's calendar" → intent: "delete_calendar_event", parameters: {"title": "demo"}
+- User: "delete all my calendar events for today" → intent: "delete_calendar_event", parameters: {"delete_all": true, "date": "today"}, response: "I'll delete all events from your calendar today."
+- User: "clear my calendar" → intent: "delete_calendar_event", parameters: {"delete_all": true, "date": "today"}, response: "I'll clear all events from your calendar today."
+- User: "delete all my tasks" → intent: "delete_task", parameters: {"delete_all": true}, response: "I'll delete all your tasks."
+- User: "remove the demo task" → intent: "delete_task", parameters: {"title": "demo"}, response: "I'll delete the demo task."
+- User: "clear all my completed tasks" → intent: "delete_task", parameters: {"delete_all": true, "status": "done"}, response: "I'll delete all completed tasks."
+- User: "delete my tasks" → intent: "delete_task", parameters: {"delete_all": true}, response: "I'll delete all your tasks." (NOT delete_calendar_event!)
 - User: "add a meeting at 3pm tomorrow and create a task to prepare slides" → MULTIPLE INTENTS:
   {
     "intents": [

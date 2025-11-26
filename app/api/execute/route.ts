@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, GetTasksParams, UpdateTaskParams, SendEmailParams, RememberParams, GetWeatherParams, GetNewsParams, AddCalendarEventParams, GetCalendarEventsParams, DeleteCalendarEventParams, TimeblockDayParams, CreateNoteParams, GetNotesParams } from '@/lib/types';
+import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, GetTasksParams, UpdateTaskParams, DeleteTaskParams, SendEmailParams, RememberParams, GetWeatherParams, GetNewsParams, AddCalendarEventParams, GetCalendarEventsParams, DeleteCalendarEventParams, TimeblockDayParams, CreateNoteParams, GetNotesParams } from '@/lib/types';
 import { getCurrentUser, createClient } from '@/lib/auth';
 import { getGoogleCalendarToken, getGmailToken, parseTimeToISO } from '@/lib/google-calendar';
 import { generateEmailHTML, generateEmailText } from '@/lib/email-template';
@@ -79,6 +79,10 @@ export async function POST(request: NextRequest) {
 
       case 'update_task':
         result = await executeUpdateTask(user.id, intent.parameters as UpdateTaskParams);
+        break;
+
+      case 'delete_task':
+        result = await executeDeleteTask(user.id, intent.parameters as DeleteTaskParams);
         break;
 
       case 'send_email':
@@ -325,6 +329,129 @@ async function executeUpdateTask(userId: string, params: UpdateTaskParams): Prom
     return {
       success: false,
       error: error.message || 'Failed to update task',
+    };
+  }
+}
+
+/**
+ * Delete task(s) from Navi AI database
+ */
+async function executeDeleteTask(userId: string, params: DeleteTaskParams): Promise<ExecutionResult> {
+  try {
+    const supabase = await createClient();
+
+    // Delete all tasks
+    if (params.delete_all) {
+      let query = (supabase
+        .from('tasks') as any)
+        .delete()
+        .eq('user_id', userId);
+
+      // Filter by status if specified
+      if (params.status && params.status !== 'all') {
+        query = query.eq('status', params.status);
+      }
+
+      const { error, count } = await query.select('id', { count: 'exact', head: true });
+
+      // Get count first
+      let countQuery = (supabase
+        .from('tasks') as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId);
+
+      if (params.status && params.status !== 'all') {
+        countQuery = countQuery.eq('status', params.status);
+      }
+
+      const { count: taskCount } = await countQuery;
+
+      // Now delete
+      let deleteQuery = (supabase
+        .from('tasks') as any)
+        .delete()
+        .eq('user_id', userId);
+
+      if (params.status && params.status !== 'all') {
+        deleteQuery = deleteQuery.eq('status', params.status);
+      }
+
+      const { error: deleteError } = await deleteQuery;
+
+      if (deleteError) {
+        throw new Error(`Database error: ${deleteError.message}`);
+      }
+
+      const statusText = params.status && params.status !== 'all' ? ` ${params.status}` : '';
+      const deletedCount = taskCount || 0;
+
+      return {
+        success: true,
+        displayResponse: `Deleted ${deletedCount}${statusText} task${deletedCount !== 1 ? 's' : ''}`,
+        spokenResponse: `Deleted ${deletedCount} tasks.`,
+      };
+    }
+
+    // Delete single task by title
+    if (!params.title) {
+      return {
+        success: false,
+        error: 'Please specify which task to delete, or say "delete all tasks" to clear all.',
+      };
+    }
+
+    // Find task by fuzzy matching title
+    const searchTerm = params.title.toLowerCase();
+
+    const { data: tasks, error: searchError } = await (supabase
+      .from('tasks') as any)
+      .select('*')
+      .eq('user_id', userId);
+
+    if (searchError) {
+      throw new Error(`Database error: ${searchError.message}`);
+    }
+
+    if (!tasks || tasks.length === 0) {
+      return {
+        success: false,
+        error: 'No tasks found to delete.',
+      };
+    }
+
+    // Find best matching task
+    const matchedTask = tasks.find((task: any) =>
+      task.title.toLowerCase().includes(searchTerm) ||
+      searchTerm.includes(task.title.toLowerCase())
+    );
+
+    if (!matchedTask) {
+      const taskTitles = tasks.slice(0, 5).map((t: any) => `• ${t.title}`).join('\n');
+      return {
+        success: false,
+        error: `I couldn't find a task matching "${params.title}". Your tasks:\n${taskTitles}`,
+      };
+    }
+
+    // Delete the task
+    const { error: deleteError } = await (supabase
+      .from('tasks') as any)
+      .delete()
+      .eq('id', matchedTask.id);
+
+    if (deleteError) {
+      throw new Error(`Failed to delete task: ${deleteError.message}`);
+    }
+
+    return {
+      success: true,
+      displayResponse: `Task "${matchedTask.title}" deleted`,
+      spokenResponse: `Task deleted.`,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || 'Failed to delete task',
     };
   }
 }
@@ -814,11 +941,23 @@ async function executeDeleteCalendarEvent(userId: string, params: DeleteCalendar
     let timeMax: Date;
 
     if (params.date) {
-      // Specific date
-      timeMin = new Date(params.date);
-      timeMin.setHours(0, 0, 0, 0);
-      timeMax = new Date(params.date);
-      timeMax.setHours(23, 59, 59, 999);
+      // Handle 'today', 'tomorrow', or ISO date
+      const dateLower = params.date.toLowerCase();
+      if (dateLower === 'today') {
+        timeMin = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        timeMax = new Date(timeMin);
+        timeMax.setHours(23, 59, 59, 999);
+      } else if (dateLower === 'tomorrow') {
+        timeMin = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        timeMax = new Date(timeMin);
+        timeMax.setHours(23, 59, 59, 999);
+      } else {
+        // Specific date in ISO format
+        timeMin = new Date(params.date);
+        timeMin.setHours(0, 0, 0, 0);
+        timeMax = new Date(params.date);
+        timeMax.setHours(23, 59, 59, 999);
+      }
     } else {
       // Search today and next 7 days by default
       timeMin = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -849,12 +988,64 @@ async function executeDeleteCalendarEvent(userId: string, params: DeleteCalendar
 
     if (events.length === 0) {
       return {
-        success: false,
-        error: 'No events found to delete.',
+        success: true,
+        displayResponse: 'No events found to delete.',
+        spokenResponse: 'No events to delete.',
       };
     }
 
-    // Find matching event by fuzzy title match
+    // If delete_all is true, delete all events for the time range
+    if (params.delete_all) {
+      let deletedCount = 0;
+      const failedEvents: string[] = [];
+
+      for (const event of events) {
+        try {
+          const deleteResponse = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/primary/events/${event.id}`,
+            {
+              method: 'DELETE',
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+              },
+            }
+          );
+
+          if (deleteResponse.ok || deleteResponse.status === 204) {
+            deletedCount++;
+          } else {
+            failedEvents.push(event.summary || '(no title)');
+          }
+        } catch {
+          failedEvents.push(event.summary || '(no title)');
+        }
+      }
+
+      const dateStr = params.date === 'today' ? 'today' : params.date === 'tomorrow' ? 'tomorrow' : timeMin.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+
+      if (failedEvents.length > 0) {
+        return {
+          success: true,
+          displayResponse: `Deleted ${deletedCount} event${deletedCount !== 1 ? 's' : ''} from your calendar ${dateStr}. Failed to delete: ${failedEvents.join(', ')}`,
+          spokenResponse: `Deleted ${deletedCount} events.`,
+        };
+      }
+
+      return {
+        success: true,
+        displayResponse: `Deleted ${deletedCount} event${deletedCount !== 1 ? 's' : ''} from your calendar ${dateStr}`,
+        spokenResponse: `Deleted ${deletedCount} events from your calendar.`,
+      };
+    }
+
+    // Single event deletion - find matching event by fuzzy title match
+    if (!params.title) {
+      return {
+        success: false,
+        error: 'Please specify which event to delete, or say "delete all events" to clear your calendar.',
+      };
+    }
+
     const searchTerm = params.title.toLowerCase();
     const matchedEvent = events.find((event: any) => {
       const summary = (event.summary || '').toLowerCase();
