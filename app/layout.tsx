@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { CookieConsent } from "@/components/ui/CookieConsent";
 
 export const metadata: Metadata = {
   title: "Navi AI - Your AI Personal Assistant",
@@ -43,7 +44,10 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Navi" />
       </head>
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        {children}
+        <CookieConsent />
+      </body>
     </html>
   );
 }

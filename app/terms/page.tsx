@@ -1,4 +1,5 @@
 import { Navigation } from '@/components/landing/Navigation'
+import { Footer } from '@/components/landing/Footer'
 import Link from 'next/link'
 
 export const metadata = {
@@ -212,16 +213,7 @@ export default function TermsPage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800 py-6 sm:py-8">
-        <div className="container mx-auto px-4 text-center text-slate-400 text-xs sm:text-sm">
-          <p>© 2025 Navi AI. All rights reserved.</p>
-          <div className="mt-2 space-x-4">
-            <Link href="/privacy" className="hover:text-white">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-white">Terms of Service</Link>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

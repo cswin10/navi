@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, GetTasksParams, UpdateTaskParams, SendEmailParams, RememberParams, GetWeatherParams, GetNewsParams, AddCalendarEventParams, GetCalendarEventsParams, TimeblockDayParams, CreateNoteParams, GetNotesParams } from '@/lib/types';
+import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParams, GetTasksParams, UpdateTaskParams, SendEmailParams, RememberParams, GetWeatherParams, GetNewsParams, AddCalendarEventParams, GetCalendarEventsParams, DeleteCalendarEventParams, TimeblockDayParams, CreateNoteParams, GetNotesParams } from '@/lib/types';
 import { getCurrentUser, createClient } from '@/lib/auth';
 import { getGoogleCalendarToken, getGmailToken, parseTimeToISO } from '@/lib/google-calendar';
 import { generateEmailHTML, generateEmailText } from '@/lib/email-template';
@@ -103,6 +103,10 @@ export async function POST(request: NextRequest) {
 
       case 'get_calendar_events':
         result = await executeGetCalendarEvents(user.id, intent.parameters as GetCalendarEventsParams);
+        break;
+
+      case 'delete_calendar_event':
+        result = await executeDeleteCalendarEvent(user.id, intent.parameters as DeleteCalendarEventParams);
         break;
 
       case 'timeblock_day':
@@ -774,6 +778,111 @@ async function executeGetCalendarEvents(userId: string, params: GetCalendarEvent
     return {
       success: false,
       error: error.message || 'Failed to get calendar events',
+    };
+  }
+}
+
+/**
+ * Delete an event from Google Calendar
+ */
+async function executeDeleteCalendarEvent(userId: string, params: DeleteCalendarEventParams): Promise<ExecutionResult> {
+  try {
+    // Get valid access token
+    const accessToken = await getGoogleCalendarToken(userId);
+
+    // Calculate time range to search for events
+    const now = new Date();
+    let timeMin: Date;
+    let timeMax: Date;
+
+    if (params.date) {
+      // Specific date
+      timeMin = new Date(params.date);
+      timeMin.setHours(0, 0, 0, 0);
+      timeMax = new Date(params.date);
+      timeMax.setHours(23, 59, 59, 999);
+    } else {
+      // Search today and next 7 days by default
+      timeMin = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      timeMax = new Date(timeMin);
+      timeMax.setDate(timeMax.getDate() + 7);
+    }
+
+    // Get events from Google Calendar
+    const url = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
+    url.searchParams.append('timeMin', timeMin.toISOString());
+    url.searchParams.append('timeMax', timeMax.toISOString());
+    url.searchParams.append('orderBy', 'startTime');
+    url.searchParams.append('singleEvents', 'true');
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Google Calendar API error: ${error.error?.message || 'Unknown error'}`);
+    }
+
+    const data = await response.json();
+    const events = data.items || [];
+
+    if (events.length === 0) {
+      return {
+        success: false,
+        error: 'No events found to delete.',
+      };
+    }
+
+    // Find matching event by fuzzy title match
+    const searchTerm = params.title.toLowerCase();
+    const matchedEvent = events.find((event: any) => {
+      const summary = (event.summary || '').toLowerCase();
+      return summary.includes(searchTerm) || searchTerm.includes(summary);
+    });
+
+    if (!matchedEvent) {
+      const eventTitles = events.slice(0, 5).map((e: any) => `• ${e.summary || '(no title)'}`).join('\n');
+      return {
+        success: false,
+        error: `I couldn't find an event matching "${params.title}". Your upcoming events:\n${eventTitles}`,
+      };
+    }
+
+    // Delete the event
+    const deleteResponse = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/primary/events/${matchedEvent.id}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    if (!deleteResponse.ok && deleteResponse.status !== 204) {
+      const error = await deleteResponse.json();
+      throw new Error(`Failed to delete event: ${error.error?.message || 'Unknown error'}`);
+    }
+
+    return {
+      success: true,
+      displayResponse: `Event "${matchedEvent.summary}" deleted from your calendar`,
+      spokenResponse: `Event deleted.`,
+    };
+  } catch (error: any) {
+    if (error.message.includes('No calendar integration found')) {
+      return {
+        success: false,
+        error: 'Google Calendar not connected. Please connect it in Settings → Integrations.',
+      };
+    }
+
+    return {
+      success: false,
+      error: error.message || 'Failed to delete calendar event',
     };
   }
 }

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimit, RateLimitConfig, RATE_LIMITS } from './rate-limit';
 
+// Re-export for convenience
+export { RATE_LIMITS } from './rate-limit';
+
 /**
  * Apply rate limiting to an API request
  * Returns null if within limits, or a 429 response if rate limited
