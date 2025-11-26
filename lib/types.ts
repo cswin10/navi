@@ -1,5 +1,5 @@
 // Core intent types
-export type IntentType = 'create_task' | 'get_tasks' | 'update_task' | 'send_email' | 'remember' | 'get_weather' | 'get_news' | 'add_calendar_event' | 'get_calendar_events' | 'delete_calendar_event' | 'timeblock_day' | 'create_note' | 'get_notes' | 'other';
+export type IntentType = 'create_task' | 'get_tasks' | 'update_task' | 'delete_task' | 'send_email' | 'remember' | 'get_weather' | 'get_news' | 'add_calendar_event' | 'get_calendar_events' | 'delete_calendar_event' | 'timeblock_day' | 'create_note' | 'get_notes' | 'other';
 
 export type Priority = 'high' | 'medium' | 'low';
 
@@ -46,8 +46,9 @@ export interface GetCalendarEventsParams {
 }
 
 export interface DeleteCalendarEventParams {
-  title: string; // Event title to search for (fuzzy match)
+  title?: string; // Event title to search for (fuzzy match) - optional if deleting all
   date?: string; // Optional date to narrow search ('today', 'tomorrow', or ISO date)
+  delete_all?: boolean; // If true, delete all events (for the specified date)
 }
 
 export interface GetTasksParams {
@@ -59,6 +60,12 @@ export interface UpdateTaskParams {
   title: string; // Title to search for (fuzzy match)
   status?: 'todo' | 'in_progress' | 'done'; // New status
   priority?: Priority; // New priority
+}
+
+export interface DeleteTaskParams {
+  title?: string; // Task title to search for (fuzzy match) - optional if deleting all
+  delete_all?: boolean; // If true, delete all tasks (requires confirmation)
+  status?: 'todo' | 'in_progress' | 'done' | 'all'; // Filter by status when deleting multiple
 }
 
 export interface GetNotesParams {
@@ -82,7 +89,7 @@ export interface CreateNoteParams {
   folder?: string; // Optional folder name
 }
 
-export type IntentParams = CreateTaskParams | GetTasksParams | UpdateTaskParams | SendEmailParams | RememberParams | GetWeatherParams | GetNewsParams | AddCalendarEventParams | GetCalendarEventsParams | DeleteCalendarEventParams | TimeblockDayParams | CreateNoteParams | GetNotesParams | Record<string, unknown>;
+export type IntentParams = CreateTaskParams | GetTasksParams | UpdateTaskParams | DeleteTaskParams | SendEmailParams | RememberParams | GetWeatherParams | GetNewsParams | AddCalendarEventParams | GetCalendarEventsParams | DeleteCalendarEventParams | TimeblockDayParams | CreateNoteParams | GetNotesParams | Record<string, unknown>;
 
 // Claude API Response (single intent)
 export interface ClaudeIntentResponse {
