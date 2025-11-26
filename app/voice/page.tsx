@@ -526,14 +526,26 @@ export default function VoicePage() {
           <AnimatePresence mode="wait">
             {appState === 'processing' && (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="text-center"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="flex flex-col items-center gap-4"
               >
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600/20 rounded-full border border-blue-500/50">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                  <p className="text-blue-400 text-sm">Processing your request...</p>
+                {/* Animated spinner */}
+                <div className="relative">
+                  <motion.div
+                    className="w-16 h-16 rounded-full border-4 border-blue-500/30"
+                    style={{ borderTopColor: 'rgb(59, 130, 246)' }}
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Sparkles className="w-6 h-6 text-blue-400" />
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-blue-400 font-medium text-lg">Processing...</p>
+                  <p className="text-gray-500 text-sm mt-1">Navi is thinking</p>
                 </div>
               </motion.div>
             )}
@@ -584,13 +596,30 @@ export default function VoicePage() {
           {/* Executing state */}
           {appState === 'executing' && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center gap-4"
             >
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-600/20 rounded-full border border-green-500/50">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <p className="text-green-400 text-sm">Executing action...</p>
+              {/* Animated spinner */}
+              <div className="relative">
+                <motion.div
+                  className="w-16 h-16 rounded-full border-4 border-green-500/30"
+                  style={{ borderTopColor: 'rgb(34, 197, 94)' }}
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 0.5, repeat: Infinity }}
+                  >
+                    <Sparkles className="w-6 h-6 text-green-400" />
+                  </motion.div>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-green-400 font-medium text-lg">Executing...</p>
+                <p className="text-gray-500 text-sm mt-1">Taking action for you</p>
               </div>
             </motion.div>
           )}
