@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { ClaudeIntentResponse, ProcessResponse } from '@/lib/types';
 import { getCurrentUser } from '@/lib/auth';
 import { createClient } from '@/lib/auth';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api-utils';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -188,6 +189,10 @@ Examples:
 }
 
 export async function POST(request: NextRequest) {
+  // Check rate limit
+  const rateLimitResponse = checkRateLimit(request, RATE_LIMITS.process);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     // Verify authentication
     const user = await getCurrentUser();

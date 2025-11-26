@@ -3,9 +3,14 @@ import { ExecuteResponse, ExecutionResult, ClaudeIntentResponse, CreateTaskParam
 import { getCurrentUser, createClient } from '@/lib/auth';
 import { getGoogleCalendarToken, getGmailToken, parseTimeToISO } from '@/lib/google-calendar';
 import { generateEmailHTML, generateEmailText } from '@/lib/email-template';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api-utils';
 import type { Database } from '@/lib/database.types';
 
 export async function POST(request: NextRequest) {
+  // Check rate limit
+  const rateLimitResponse = checkRateLimit(request, RATE_LIMITS.execute);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     // Verify authentication
     const user = await getCurrentUser();

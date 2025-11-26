@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TTSResponse } from '@/lib/types';
 import { getCurrentUser } from '@/lib/auth';
 import { formatForTTS } from '@/lib/tts-formatter';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api-utils';
 
 // ElevenLabs TTS configuration
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
@@ -13,6 +14,10 @@ const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 const VOICE_ID = 'pFZP5JQG7iQjIQuC4Bku'; // Lily - British female
 
 export async function POST(request: NextRequest) {
+  // Check rate limit
+  const rateLimitResponse = checkRateLimit(request, RATE_LIMITS.speak);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     // Verify authentication
     const user = await getCurrentUser();

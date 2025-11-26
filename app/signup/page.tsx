@@ -15,6 +15,7 @@ export default function SignUpPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName] = useState('')
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -23,6 +24,13 @@ export default function SignUpPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
+
+    // Validate terms agreement
+    if (!agreedToTerms) {
+      setError('Please agree to the Terms of Service and Privacy Policy')
+      setLoading(false)
+      return
+    }
 
     // Validate password confirmation
     if (password !== confirmPassword) {
@@ -147,6 +155,26 @@ export default function SignUpPage() {
                   required
                 />
 
+                {/* Terms & Privacy Consent */}
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={agreedToTerms}
+                    onChange={(e) => setAgreedToTerms(e.target.checked)}
+                    className="mt-1 w-4 h-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0 focus:ring-offset-slate-900"
+                  />
+                  <span className="text-xs sm:text-sm text-slate-400 group-hover:text-slate-300">
+                    I agree to the{' '}
+                    <Link href="/terms" className="text-blue-400 hover:underline" target="_blank">
+                      Terms of Service
+                    </Link>{' '}
+                    and{' '}
+                    <Link href="/privacy" className="text-blue-400 hover:underline" target="_blank">
+                      Privacy Policy
+                    </Link>
+                  </span>
+                </label>
+
                 <Button
                   type="submit"
                   className="w-full text-sm sm:text-base"
@@ -168,7 +196,8 @@ export default function SignUpPage() {
         </Card>
 
         <p className="text-center text-[10px] sm:text-xs text-slate-500 mt-3 sm:mt-4 px-4">
-          By signing up, you agree to our Terms of Service and Privacy Policy
+          Your data is processed securely.{' '}
+          <Link href="/privacy" className="text-slate-400 hover:text-slate-300">Learn more</Link>
         </p>
       </div>
     </div>
