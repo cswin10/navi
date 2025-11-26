@@ -7,8 +7,34 @@ import { createClient } from '@/lib/supabase-browser'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { CheckSquare, Clock, CheckCircle2, Mic, ArrowRight, FileText, Folder, Plus } from 'lucide-react'
+import { CheckSquare, Clock, CheckCircle2, Mic, ArrowRight, FileText, Folder, Plus, AlertCircle, Calendar, Check } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { SkeletonDashboard, SkeletonTaskCard, SkeletonNoteCard } from '@/components/ui/Skeleton'
+
+// Helper to check if a task is overdue
+function isOverdue(task: Task): boolean {
+  if (!task.due_date || task.status === 'done') return false
+  const dueDate = new Date(task.due_date)
+  dueDate.setHours(23, 59, 59, 999)
+  return dueDate < new Date()
+}
+
+// Helper to check if due today
+function isDueToday(task: Task): boolean {
+  if (!task.due_date || task.status === 'done') return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const dueDate = new Date(task.due_date)
+  dueDate.setHours(0, 0, 0, 0)
+  return dueDate.getTime() === today.getTime()
+}
+
+interface CalendarEvent {
+  id: string
+  summary: string
+  start: { dateTime?: string; date?: string }
+  end: { dateTime?: string; date?: string }
+}
 
 interface DashboardStats {
   totalTasks: number
@@ -46,6 +72,10 @@ export default function DashboardPage() {
   })
   const [recentTasks, setRecentTasks] = useState<Task[]>([])
   const [recentNotes, setRecentNotes] = useState<Note[]>([])
+  const [overdueTasks, setOverdueTasks] = useState<Task[]>([])
+  const [dueTodayTasks, setDueTodayTasks] = useState<Task[]>([])
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([])
+  const [hasCalendar, setHasCalendar] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -77,6 +107,35 @@ export default function DashboardPage() {
         })
 
         setRecentTasks(tasks.slice(0, 5))
+
+        // Set overdue and due today tasks
+        const overdue = tasks.filter((t: Task) => isOverdue(t))
+        const dueToday = tasks.filter((t: Task) => isDueToday(t))
+        setOverdueTasks(overdue)
+        setDueTodayTasks(dueToday)
+      }
+
+      // Check for calendar integration and load today's events
+      const { data: integration } = await supabase
+        .from('user_integrations')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('integration_type', 'google_calendar')
+        .eq('is_active', true)
+        .maybeSingle()
+
+      if (integration) {
+        setHasCalendar(true)
+        // Try to load today's calendar events
+        try {
+          const response = await fetch('/api/calendar/today')
+          const data = await response.json()
+          if (data.success && data.events) {
+            setCalendarEvents(data.events.slice(0, 5))
+          }
+        } catch (error) {
+          // Calendar fetch failed silently
+        }
       }
 
       // Load notes
@@ -96,6 +155,42 @@ export default function DashboardPage() {
 
     loadDashboard()
   }, [router])
+
+  // Quick complete task
+  async function handleQuickComplete(taskId: string) {
+    const supabase = createClient()
+    const { error } = await (supabase
+      .from('tasks') as any)
+      .update({ status: 'done' })
+      .eq('id', taskId)
+
+    if (!error) {
+      // Update local state
+      setOverdueTasks(overdueTasks.filter(t => t.id !== taskId))
+      setDueTodayTasks(dueTodayTasks.filter(t => t.id !== taskId))
+      setRecentTasks(recentTasks.map(t =>
+        t.id === taskId ? { ...t, status: 'done' as const } : t
+      ))
+      setStats(prev => ({
+        ...prev,
+        todoTasks: prev.todoTasks - 1,
+        completedTasks: prev.completedTasks + 1,
+      }))
+    }
+  }
+
+  // Format calendar time
+  function formatEventTime(event: CalendarEvent): string {
+    if (event.start.dateTime) {
+      const date = new Date(event.start.dateTime)
+      return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    }
+    return 'All day'
+  }
+
+  if (loading) {
+    return <SkeletonDashboard />
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8">
@@ -185,6 +280,121 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Today's Focus - Only show if there are items */}
+      {(overdueTasks.length > 0 || dueTodayTasks.length > 0 || calendarEvents.length > 0) && (
+        <Card className="border-blue-500/30">
+          <CardHeader className="p-3 sm:p-4 lg:p-6">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                <AlertCircle className="w-4 h-4 text-blue-400" />
+              </div>
+              <CardTitle className="text-base sm:text-lg">Today's Focus</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-3 sm:p-4 lg:p-6 pt-0 space-y-4">
+            {/* Overdue Tasks */}
+            {overdueTasks.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="w-4 h-4 text-red-400" />
+                  <h4 className="text-sm font-medium text-red-400">Overdue ({overdueTasks.length})</h4>
+                </div>
+                <div className="space-y-2">
+                  {overdueTasks.slice(0, 3).map(task => (
+                    <div
+                      key={task.id}
+                      className="flex items-center gap-2 p-2.5 bg-red-500/10 rounded-lg border border-red-500/30"
+                    >
+                      <button
+                        onClick={() => handleQuickComplete(task.id)}
+                        className="w-5 h-5 rounded border-2 border-red-400 flex items-center justify-center hover:bg-red-500/20 transition-colors flex-shrink-0"
+                        title="Mark as done"
+                      >
+                        <Check className="w-3 h-3 text-transparent hover:text-red-400" />
+                      </button>
+                      <span className="text-white text-sm flex-1 truncate">{task.title}</span>
+                      <Badge variant="danger" className="text-[10px]">
+                        {formatDate(task.due_date!)}
+                      </Badge>
+                    </div>
+                  ))}
+                  {overdueTasks.length > 3 && (
+                    <Link href="/dashboard/tasks?filter=overdue">
+                      <p className="text-xs text-red-400 hover:underline">
+                        +{overdueTasks.length - 3} more overdue tasks
+                      </p>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Due Today */}
+            {dueTodayTasks.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="w-4 h-4 text-yellow-400" />
+                  <h4 className="text-sm font-medium text-yellow-400">Due Today ({dueTodayTasks.length})</h4>
+                </div>
+                <div className="space-y-2">
+                  {dueTodayTasks.slice(0, 3).map(task => (
+                    <div
+                      key={task.id}
+                      className="flex items-center gap-2 p-2.5 bg-yellow-500/10 rounded-lg border border-yellow-500/30"
+                    >
+                      <button
+                        onClick={() => handleQuickComplete(task.id)}
+                        className="w-5 h-5 rounded border-2 border-yellow-400 flex items-center justify-center hover:bg-yellow-500/20 transition-colors flex-shrink-0"
+                        title="Mark as done"
+                      >
+                        <Check className="w-3 h-3 text-transparent hover:text-yellow-400" />
+                      </button>
+                      <span className="text-white text-sm flex-1 truncate">{task.title}</span>
+                      <Badge variant={task.priority} className="text-[10px]">
+                        {task.priority}
+                      </Badge>
+                    </div>
+                  ))}
+                  {dueTodayTasks.length > 3 && (
+                    <Link href="/dashboard/tasks?filter=today">
+                      <p className="text-xs text-yellow-400 hover:underline">
+                        +{dueTodayTasks.length - 3} more tasks due today
+                      </p>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Calendar Events */}
+            {calendarEvents.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-4 h-4 text-blue-400" />
+                  <h4 className="text-sm font-medium text-blue-400">Today's Schedule</h4>
+                </div>
+                <div className="space-y-2">
+                  {calendarEvents.map(event => (
+                    <div
+                      key={event.id}
+                      className="flex items-center gap-2 p-2.5 bg-blue-500/10 rounded-lg border border-blue-500/30"
+                    >
+                      <div className="w-5 h-5 rounded bg-blue-500/30 flex items-center justify-center flex-shrink-0">
+                        <Calendar className="w-3 h-3 text-blue-400" />
+                      </div>
+                      <span className="text-white text-sm flex-1 truncate">{event.summary}</span>
+                      <span className="text-xs text-blue-400 font-mono">
+                        {formatEventTime(event)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Recent Tasks */}
       <Card>
         <CardHeader className="p-3 sm:p-4 lg:p-6">
@@ -199,11 +409,11 @@ export default function DashboardPage() {
           </div>
         </CardHeader>
         <CardContent className="p-3 sm:p-4 lg:p-6 pt-0">
-          {loading ? (
-            <p className="text-slate-400 text-sm">Loading...</p>
-          ) : recentTasks.length === 0 ? (
+          {recentTasks.length === 0 ? (
             <div className="text-center py-6 sm:py-8">
-              <p className="text-slate-400 mb-3 sm:mb-4 text-sm">No tasks yet!</p>
+              <CheckSquare className="w-10 h-10 sm:w-12 sm:h-12 text-slate-600 mx-auto mb-3 sm:mb-4" />
+              <p className="text-slate-400 mb-2 text-sm">No tasks yet!</p>
+              <p className="text-slate-500 text-xs mb-4">Try saying: "Add a task to review the project proposal"</p>
               <Link href="/voice">
                 <Button className="text-sm">
                   <Mic className="w-4 h-4 mr-2" />
@@ -253,12 +463,11 @@ export default function DashboardPage() {
           </div>
         </CardHeader>
         <CardContent className="p-3 sm:p-4 lg:p-6 pt-0">
-          {loading ? (
-            <p className="text-slate-400 text-sm">Loading...</p>
-          ) : recentNotes.length === 0 ? (
+          {recentNotes.length === 0 ? (
             <div className="text-center py-6 sm:py-8">
               <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-slate-600 mx-auto mb-3 sm:mb-4" />
-              <p className="text-slate-400 mb-3 sm:mb-4 text-sm">No notes yet!</p>
+              <p className="text-slate-400 mb-2 text-sm">No notes yet!</p>
+              <p className="text-slate-500 text-xs mb-4">Try saying: "Take a note about the meeting summary"</p>
               <Link href="/voice">
                 <Button className="text-sm">
                   <Mic className="w-4 h-4 mr-2" />

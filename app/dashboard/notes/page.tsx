@@ -7,7 +7,8 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Toast } from '@/components/ui/Toast'
-import { FileText, Folder, Search, Plus, Trash2, Edit2, X } from 'lucide-react'
+import { FileText, Folder, Search, Plus, Trash2, Edit2, X, Mic } from 'lucide-react'
+import { SkeletonNotesPage } from '@/components/ui/Skeleton'
 
 interface Note {
   id: string
@@ -235,11 +236,7 @@ export default function NotesPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-slate-400">Loading notes...</p>
-      </div>
-    )
+    return <SkeletonNotesPage />
   }
 
   const folders = getFolders()
@@ -336,9 +333,21 @@ export default function NotesPage() {
             <Card>
               <CardContent className="py-8 sm:py-12 text-center">
                 <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-slate-600 mx-auto mb-3 sm:mb-4" />
-                <p className="text-sm sm:text-base text-slate-400">
-                  {searchQuery ? 'No notes match your search' : 'No notes yet. Create one to get started!'}
-                </p>
+                {searchQuery ? (
+                  <>
+                    <p className="text-sm sm:text-base text-slate-400 mb-2">No notes match your search</p>
+                    <p className="text-xs text-slate-500">Try a different search term</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm sm:text-base text-slate-400 mb-2">No notes yet</p>
+                    <p className="text-xs text-slate-500 mb-4">Try: "Take a note about the project requirements"</p>
+                    <Button onClick={() => setShowCreateModal(true)} className="text-sm">
+                      <Mic className="w-4 h-4 mr-2" />
+                      Create your first note
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           ) : (

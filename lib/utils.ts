@@ -7,22 +7,33 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatDate(date: string | Date): string {
   const d = new Date(date)
+  // Normalize to start of day for comparison
+  d.setHours(0, 0, 0, 0)
   const now = new Date()
-  const diff = now.getTime() - d.getTime()
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  now.setHours(0, 0, 0, 0)
+
+  const diffMs = now.getTime() - d.getTime()
+  const days = Math.round(diffMs / (1000 * 60 * 60 * 24))
 
   if (days === 0) {
     return 'Today'
+  } else if (days === -1) {
+    return 'Tomorrow'
+  } else if (days < -1 && days >= -7) {
+    return `In ${Math.abs(days)} days`
   } else if (days === 1) {
-    return 'Yesterday'
-  } else if (days < 7) {
-    return `${days} days ago`
-  } else {
+    return 'Overdue'
+  } else if (days > 1 && days < 7) {
+    return `Overdue`
+  } else if (days < -7) {
+    // Future date more than a week away
     return d.toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'short',
-      year: 'numeric',
     })
+  } else {
+    // Past date more than a week ago
+    return 'Overdue'
   }
 }
 
