@@ -1,10 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
 export function Navigation() {
+  const scrollToWaitlist = () => {
+    // Scroll to the CTA section with waitlist form
+    const ctaSection = document.querySelector('section:last-of-type')
+    ctaSection?.scrollIntoView({ behavior: 'smooth' })
+  }
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-900/80 backdrop-blur-lg border-b border-slate-800">
       <div className="container mx-auto px-3 sm:px-4">
@@ -21,16 +26,20 @@ export function Navigation() {
             </span>
           </Link>
 
-          {/* Auth buttons */}
+          {/* Nav Links */}
           <div className="flex items-center gap-2 sm:gap-4">
-            <Link href="/login">
+            <Link href="/login" className="hidden sm:block">
               <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
                 Sign In
               </Button>
             </Link>
-            <Link href="/signup">
-              <Button size="sm" className="text-xs sm:text-sm px-3 sm:px-4">Get Started</Button>
-            </Link>
+            <Button
+              size="sm"
+              className="text-xs sm:text-sm px-3 sm:px-4"
+              onClick={scrollToWaitlist}
+            >
+              Join Waitlist
+            </Button>
           </div>
         </div>
       </div>
