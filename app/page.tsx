@@ -2,6 +2,7 @@ import { Navigation } from '@/components/landing/Navigation'
 import { Hero } from '@/components/landing/Hero'
 import { Features } from '@/components/landing/Features'
 import { CTA } from '@/components/landing/CTA'
+import { Footer } from '@/components/landing/Footer'
 
 export default function LandingPage() {
   return (
@@ -10,13 +11,7 @@ export default function LandingPage() {
       <Hero />
       <Features />
       <CTA />
-
-      {/* Footer */}
-      <footer className="border-t border-slate-800 py-6 sm:py-8">
-        <div className="container mx-auto px-4 text-center text-slate-400 text-xs sm:text-sm">
-          <p>© 2025 Navi AI. Powered by OpenAI, Anthropic, and ElevenLabs.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

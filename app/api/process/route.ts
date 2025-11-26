@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { ClaudeIntentResponse, ProcessResponse } from '@/lib/types';
 import { getCurrentUser } from '@/lib/auth';
 import { createClient } from '@/lib/auth';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/api-utils';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -61,6 +62,7 @@ IMPORTANT RULES:
 - When user asks about news, use intent "get_news"
 - When user wants to add calendar event(s), use "add_calendar_event" or "timeblock_day"
 - When user asks what's on calendar/schedule, use "get_calendar_events"
+- DELETE CALENDAR EVENT: When user wants to remove/delete/cancel a calendar event (e.g., "delete the meeting", "cancel my 3pm appointment", "remove the call from my calendar", "clear my day"), use "delete_calendar_event"
 - When user asks about tasks/to-dos (e.g. "what are my tasks", "show my tasks", "what's on my to-do list"), use "get_tasks"
 - TASKS vs CALENDAR: "tasks" and "to-do" refer to tasks (get_tasks), "calendar", "schedule", "meetings" refer to calendar (get_calendar_events)
 - For timeblocking, parse multiple time blocks from natural language
@@ -72,7 +74,7 @@ IMPORTANT RULES:
 
 Respond with JSON (SINGLE INTENT):
 {
-  "intent": "create_task" | "get_tasks" | "update_task" | "send_email" | "remember" | "get_weather" | "get_news" | "add_calendar_event" | "get_calendar_events" | "timeblock_day" | "create_note" | "get_notes" | "other",
+  "intent": "create_task" | "get_tasks" | "update_task" | "send_email" | "remember" | "get_weather" | "get_news" | "add_calendar_event" | "get_calendar_events" | "delete_calendar_event" | "timeblock_day" | "create_note" | "get_notes" | "other",
   "response": "Brief response",
   "parameters": {
     // For create_task (ALL fields required):
@@ -125,6 +127,10 @@ Respond with JSON (SINGLE INTENT):
     "date": "ISO date string (optional, YYYY-MM-DD)",
     "timeframe": "day | week | month (optional, default: day)"
 
+    // For delete_calendar_event:
+    "title": "string (event title to search for - fuzzy match)",
+    "date": "ISO date string (optional, YYYY-MM-DD - narrows search to specific day)"
+
     // For timeblock_day:
     "date": "ISO date string (optional, YYYY-MM-DD - defaults to today)",
     "blocks": [
@@ -176,6 +182,10 @@ Examples:
 - User: "complete the report task" → intent: "update_task", parameters: {"title": "report", "status": "done"}
 - User: "what notes do I have about the project?" → intent: "get_notes", parameters: {"query": "project"}
 - User: "show my meeting notes" → intent: "get_notes", parameters: {"folder": "Meeting Notes"}
+- User: "delete the team standup" → intent: "delete_calendar_event", parameters: {"title": "team standup"}
+- User: "cancel my 3pm meeting" → intent: "delete_calendar_event", parameters: {"title": "meeting"}
+- User: "remove the call from my calendar" → intent: "delete_calendar_event", parameters: {"title": "call"}
+- User: "clear the demo from today's calendar" → intent: "delete_calendar_event", parameters: {"title": "demo"}
 - User: "add a meeting at 3pm tomorrow and create a task to prepare slides" → MULTIPLE INTENTS:
   {
     "intents": [
@@ -188,6 +198,10 @@ Examples:
 }
 
 export async function POST(request: NextRequest) {
+  // Check rate limit
+  const rateLimitResponse = checkRateLimit(request, RATE_LIMITS.process);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     // Verify authentication
     const user = await getCurrentUser();

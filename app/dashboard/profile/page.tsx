@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Toast } from '@/components/ui/Toast'
-import { User, Brain, Save, Plus, Trash2, Check } from 'lucide-react'
+import { User, Brain, Save, Plus, Trash2, Check, AlertTriangle, Download } from 'lucide-react'
 
 interface UserProfile {
   id: string
@@ -154,6 +154,11 @@ export default function ProfilePage() {
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
+  // Delete account state
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
+
   useEffect(() => {
     loadProfile()
   }, [])
@@ -274,6 +279,32 @@ export default function ProfilePage() {
       setToast({ message: `Failed to save changes: ${error.message}`, type: 'error' })
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirmText !== 'DELETE') return
+
+    setDeleting(true)
+    try {
+      const response = await fetch('/api/account/delete', {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete account')
+      }
+
+      // Redirect to home page after successful deletion
+      router.push('/')
+    } catch (error: any) {
+      setToast({ message: `Failed to delete account: ${error.message}`, type: 'error' })
+      setShowDeleteModal(false)
+      setDeleteConfirmText('')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -687,6 +718,141 @@ john@company.com
           </div>
         </CardContent>
       </Card>
+
+      {/* Your Data (GDPR) */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Download className="w-5 h-5 text-green-400" />
+            </div>
+            <div className="min-w-0">
+              <CardTitle className="text-base sm:text-lg">Your Data</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                Download or manage your personal data
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
+            <div>
+              <h4 className="text-white font-medium">Export Your Data</h4>
+              <p className="text-sm text-slate-400 mt-1">
+                Download a copy of all your data including profile, tasks, notes, and history.
+              </p>
+            </div>
+            <a
+              href="/api/account/export"
+              download
+              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors whitespace-nowrap"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export Data
+            </a>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Danger Zone */}
+      <Card className="border-red-500/30">
+        <CardHeader>
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-5 h-5 text-red-400" />
+            </div>
+            <div className="min-w-0">
+              <CardTitle className="text-base sm:text-lg text-red-400">Danger Zone</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                Irreversible actions that affect your account
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <div>
+              <h4 className="text-white font-medium">Delete Account</h4>
+              <p className="text-sm text-slate-400 mt-1">
+                Permanently delete your account and all associated data. This action cannot be undone.
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              onClick={() => setShowDeleteModal(true)}
+              className="border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-300 whitespace-nowrap"
+            >
+              Delete Account
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Delete Account Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl max-w-md w-full p-6 border border-slate-700">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Delete Account</h3>
+                <p className="text-sm text-slate-400">This action is permanent</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                <p className="text-sm text-slate-300">
+                  This will permanently delete:
+                </p>
+                <ul className="mt-2 text-sm text-slate-400 space-y-1">
+                  <li>• Your profile and preferences</li>
+                  <li>• All tasks and notes</li>
+                  <li>• Action history and sessions</li>
+                  <li>• Connected integrations</li>
+                </ul>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Type <span className="font-mono bg-slate-700 px-1.5 py-0.5 rounded">DELETE</span> to confirm
+                </label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="DELETE"
+                  className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setShowDeleteModal(false)
+                    setDeleteConfirmText('')
+                  }}
+                  className="flex-1"
+                  disabled={deleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirmText !== 'DELETE' || deleting}
+                  isLoading={deleting}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white border-red-600"
+                >
+                  {deleting ? 'Deleting...' : 'Delete Account'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sticky Save Button */}
       <div className="sticky bottom-4 z-10 flex justify-center sm:justify-end px-4 sm:px-0">
