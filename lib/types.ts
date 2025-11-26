@@ -33,8 +33,9 @@ export interface GetNewsParams {
 
 export interface AddCalendarEventParams {
   title: string;
-  start_time: string; // ISO datetime or natural language
-  end_time?: string; // ISO datetime or natural language (optional, defaults to 1 hour)
+  date?: string; // ISO date (YYYY-MM-DD) or 'today', 'tomorrow'
+  start_time: string; // Time like '9am', '14:00', '2:30pm'
+  end_time?: string; // Time (optional, defaults to 1 hour)
   description?: string;
   location?: string;
 }
