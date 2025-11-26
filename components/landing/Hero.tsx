@@ -1,9 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Sparkles, Mic, CheckCircle } from 'lucide-react'
-import Link from 'next/link'
-import { Button } from '@/components/ui/Button'
+import { Play, CheckCircle } from 'lucide-react'
+import { WaitlistForm } from './WaitlistForm'
 
 export function Hero() {
   return (
@@ -65,24 +64,47 @@ export function Hero() {
             Speak naturally and watch things happen. Send emails, manage your calendar, create tasks, and get real time information about your day. All with your voice.
           </motion.p>
 
-          {/* CTA Buttons */}
+          {/* Video Placeholder */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.6 }}
+            className="mb-8 sm:mb-10 lg:mb-12 px-4 sm:px-0"
+          >
+            <div className="relative max-w-3xl mx-auto aspect-video rounded-xl overflow-hidden bg-slate-800/50 border border-slate-700">
+              {/* Video will go here - for now show placeholder */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-blue-500/20 flex items-center justify-center mb-4 cursor-pointer hover:bg-blue-500/30 transition-colors">
+                  <Play className="w-8 h-8 sm:w-10 sm:h-10 text-blue-400 ml-1" />
+                </div>
+                <p className="text-slate-400 text-sm sm:text-base">Watch Demo Video</p>
+              </div>
+              {/* When you have the video, replace the above with:
+              <video
+                className="w-full h-full object-cover"
+                poster="/video-thumbnail.jpg"
+                controls
+              >
+                <source src="/demo-video.mp4" type="video/mp4" />
+              </video>
+              */}
+            </div>
+          </motion.div>
+
+          {/* Waitlist Form */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.6 }}
-            className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4 sm:px-0"
+            className="flex flex-col items-center px-4 sm:px-0"
           >
-            <Link href="/signup" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto sm:min-w-[200px] text-sm sm:text-base">
-                <Mic className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                Get Started Free
-              </Button>
-            </Link>
-            <Link href="/login" className="w-full sm:w-auto">
-              <Button size="lg" variant="secondary" className="w-full sm:w-auto sm:min-w-[200px] text-sm sm:text-base">
-                Sign In
-              </Button>
-            </Link>
+            <p className="text-white font-semibold text-lg sm:text-xl mb-4">
+              Join the Waitlist for Early Access
+            </p>
+            <WaitlistForm size="large" />
+            <p className="text-slate-400 text-sm mt-4">
+              Be the first to try Navi when we launch.
+            </p>
           </motion.div>
 
           {/* Trust indicators */}
