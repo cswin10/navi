@@ -544,8 +544,7 @@ export default function VoicePage() {
                   </div>
                 </div>
                 <div className="text-center">
-                  <p className="text-blue-400 font-medium text-lg">Processing...</p>
-                  <p className="text-gray-500 text-sm mt-1">Navi is thinking</p>
+                  <p className="text-blue-400 font-medium text-lg">Navi is thinking...</p>
                 </div>
               </motion.div>
             )}
@@ -618,8 +617,7 @@ export default function VoicePage() {
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-green-400 font-medium text-lg">Executing...</p>
-                <p className="text-gray-500 text-sm mt-1">Taking action for you</p>
+                <p className="text-green-400 font-medium text-lg">Taking action...</p>
               </div>
             </motion.div>
           )}

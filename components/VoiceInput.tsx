@@ -154,13 +154,22 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
           </motion.p>
         )}
         {isProcessing && (
-          <motion.p
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-blue-400 font-medium"
+            className="flex flex-col items-center gap-2"
           >
-            Processing...
-          </motion.p>
+            {/* Spinner */}
+            <motion.div
+              className="w-6 h-6 rounded-full border-2 border-blue-500/30"
+              style={{ borderTopColor: 'rgb(59, 130, 246)' }}
+              animate={{ rotate: 360 }}
+              transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+            />
+            <p className="text-blue-400 font-medium">
+              Transcribing...
+            </p>
+          </motion.div>
         )}
         {!isRecording && !isProcessing && (
           <p className="text-gray-400">Click to start speaking</p>

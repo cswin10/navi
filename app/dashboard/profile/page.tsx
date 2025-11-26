@@ -317,7 +317,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 lg:space-y-8 pb-20">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8 pb-24 sm:pb-20">
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-1 sm:mb-2">Profile</h1>
@@ -855,7 +855,7 @@ john@company.com
       )}
 
       {/* Sticky Save Button */}
-      <div className="sticky bottom-4 z-10 flex justify-center sm:justify-end px-4 sm:px-0">
+      <div className="sticky bottom-6 sm:bottom-4 z-10 flex justify-center sm:justify-end px-4 sm:px-0 pb-safe">
         <div className={`backdrop-blur-sm border rounded-xl p-3 shadow-2xl transition-all duration-300 ${
           saved
             ? 'bg-green-600/95 border-green-500'
