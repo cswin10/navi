@@ -118,6 +118,7 @@ Respond with JSON (SINGLE INTENT):
 
     // For add_calendar_event:
     "title": "string",
+    "date": "ISO date string (YYYY-MM-DD) - ALWAYS include this! Calculate from today's date above. Use 'tomorrow', 'today', or specific date",
     "start_time": "string (e.g. '9am', '14:00', '2:30pm')",
     "end_time": "string (optional, e.g. '10am', '15:00', '3:30pm')",
     "description": "string (optional)",
@@ -170,7 +171,7 @@ Examples:
 - User: "note down the recipe: chicken, garlic, olive oil, cook for 20 minutes at 180 degrees" → intent: "create_note", response: "Got it, creating that note."
 - User: "what's the weather like?" → intent: "get_weather", response: "Let me check the weather for you."
 - User: "any news on AI?" → intent: "get_news", response: "Let me find the latest AI news."
-- User: "add a meeting at 2pm tomorrow" → intent: "add_calendar_event", response: "I'll add a meeting to your calendar at 2pm tomorrow."
+- User: "add a meeting at 2pm tomorrow" → intent: "add_calendar_event", parameters: {"title": "Meeting", "date": "2024-01-16", "start_time": "2pm"}, response: "I'll add a meeting to your calendar at 2pm tomorrow."
 - User: "what do I have today?" → intent: "get_calendar_events", response: "Let me check your calendar for today."
 - User: "what are my tasks?" → intent: "get_tasks", response: "Let me check your tasks."
 - User: "show my to-do list" → intent: "get_tasks", response: "Here are your tasks."
@@ -189,10 +190,10 @@ Examples:
 - User: "add a meeting at 3pm tomorrow and create a task to prepare slides" → MULTIPLE INTENTS:
   {
     "intents": [
-      {"intent": "add_calendar_event", "response": "Meeting added", "parameters": {"title": "Meeting", "start_time": "3pm", ...}},
-      {"intent": "create_task", "response": "Task created", "parameters": {"title": "Prepare slides", ...}}
+      {"intent": "add_calendar_event", "response": "Meeting added", "parameters": {"title": "Meeting", "date": "2024-01-16", "start_time": "3pm"}},
+      {"intent": "create_task", "response": "Task created", "parameters": {"title": "Prepare slides", "priority": "medium"}}
     ],
-    "response": "I'll add the meeting at 3pm and create a task to prepare slides."
+    "response": "I'll add the meeting at 3pm tomorrow and create a task to prepare slides."
   }
 - User: "hi" → intent: "other", response: "Hey! What do you need?"`;
 }

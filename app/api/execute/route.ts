@@ -606,10 +606,25 @@ async function executeAddCalendarEvent(userId: string, params: AddCalendarEventP
     // Get valid access token
     const accessToken = await getGoogleCalendarToken(userId);
 
-    // Parse times to ISO format
-    const startDateTime = parseTimeToISO(params.start_time);
+    // Parse date parameter (defaults to today)
+    let targetDate = new Date();
+    if (params.date) {
+      const dateLower = params.date.toLowerCase();
+      if (dateLower === 'today') {
+        targetDate = new Date();
+      } else if (dateLower === 'tomorrow') {
+        targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + 1);
+      } else {
+        // Assume ISO date format (YYYY-MM-DD)
+        targetDate = new Date(params.date);
+      }
+    }
+
+    // Parse times to ISO format using the target date
+    const startDateTime = parseTimeToISO(params.start_time, targetDate);
     const endDateTime = params.end_time
-      ? parseTimeToISO(params.end_time)
+      ? parseTimeToISO(params.end_time, targetDate)
       : new Date(new Date(startDateTime).getTime() + 60 * 60 * 1000).toISOString(); // Default 1 hour duration
 
     // Create calendar event
@@ -641,9 +656,12 @@ async function executeAddCalendarEvent(userId: string, params: AddCalendarEventP
 
     const event = await response.json();
 
+    // Format date for display
+    const dateStr = targetDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+
     return {
       success: true,
-      displayResponse: `Event "${params.title}" added to your calendar at ${params.start_time}${params.end_time ? ` to ${params.end_time}` : ''}`,
+      displayResponse: `Event "${params.title}" added to your calendar on ${dateStr} at ${params.start_time}${params.end_time ? ` to ${params.end_time}` : ''}`,
       spokenResponse: `Event added to your calendar.`,
     };
   } catch (error: any) {
