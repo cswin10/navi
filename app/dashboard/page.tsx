@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/Badge'
 import { CheckSquare, Clock, CheckCircle2, Mic, ArrowRight, FileText, Folder, Plus, AlertCircle, Calendar, Check } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { SkeletonDashboard, SkeletonTaskCard, SkeletonNoteCard } from '@/components/ui/Skeleton'
+import GettingStarted from '@/components/dashboard/GettingStarted'
 
 // Helper to check if a task is overdue
 function isOverdue(task: Task): boolean {
@@ -199,6 +200,9 @@ export default function DashboardPage() {
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-1 sm:mb-2">Dashboard</h1>
         <p className="text-sm sm:text-base text-slate-400">Welcome back! Here's your overview.</p>
       </div>
+
+      {/* Getting Started - Only shows for new users */}
+      <GettingStarted />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">

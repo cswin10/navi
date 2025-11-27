@@ -549,10 +549,11 @@ export default function VoicePage() {
         {/* Main content area */}
         <div className="max-w-4xl mx-auto space-y-8">
           {/* Voice Input - Always visible */}
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center">
             <VoiceInput
               onTranscript={handleTranscript}
               disabled={appState !== 'idle'}
+              showSuggestions={appState === 'idle' && !actionState.transcript}
             />
           </div>
 

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Toast } from '@/components/ui/Toast'
 import { User, Brain, Save, Plus, Trash2, Check, AlertTriangle, Download } from 'lucide-react'
+import { CollapsibleSection } from '@/components/ui/CollapsibleSection'
 
 interface UserProfile {
   id: string
@@ -389,304 +390,248 @@ export default function ProfilePage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-3">
           {/* People Section */}
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">👥</span>
-                  <label className="text-sm font-medium text-white">People</label>
-                </div>
-                <span className="text-xs text-slate-500 ml-6 sm:ml-0">Contacts, family, colleagues</span>
-              </div>
-              <Button variant="ghost" size="sm" onClick={addPerson} className="text-purple-400 hover:text-purple-300 self-start sm:self-auto">
-                <Plus className="w-4 h-4 mr-1" />
-                Add Person
-              </Button>
-            </div>
-            {knowledgeSections.people.length === 0 ? (
-              <p className="text-sm text-slate-500 italic">No contacts added yet. Click "Add Person" to get started.</p>
-            ) : (
-              <div className="space-y-3">
-                {knowledgeSections.people.map((person, index) => (
-                  <div key={index} className="bg-slate-800/50 p-3 sm:p-4 rounded-lg border border-slate-700">
-                    <div className="flex gap-2 items-start">
-                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-                        <input
-                          type="text"
-                          value={person.name}
-                          onChange={(e) => updatePerson(index, 'name', e.target.value)}
-                          placeholder="Name"
-                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                        />
-                        <input
-                          type="text"
-                          value={person.relationship}
-                          onChange={(e) => updatePerson(index, 'relationship', e.target.value)}
-                          placeholder="Relationship"
-                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                        />
-                        <input
-                          type="email"
-                          value={person.email}
-                          onChange={(e) => updatePerson(index, 'email', e.target.value)}
-                          placeholder="Email (optional)"
-                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                        />
-                      </div>
-                      <button
-                        onClick={() => removePerson(index)}
-                        className="p-2 text-slate-400 hover:text-red-400 transition-colors flex-shrink-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+          <CollapsibleSection
+            icon="👥"
+            title="People"
+            subtitle="Contacts, family, colleagues"
+            onAdd={addPerson}
+            addLabel="Add Person"
+            isEmpty={knowledgeSections.people.length === 0}
+            emptyMessage="Add contacts so Navi can send emails to people by name"
+            itemCount={knowledgeSections.people.length}
+          >
+            <div className="space-y-3">
+              {knowledgeSections.people.map((person, index) => (
+                <div key={index} className="bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                  <div className="flex gap-2 items-start">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        value={person.name}
+                        onChange={(e) => updatePerson(index, 'name', e.target.value)}
+                        placeholder="Name"
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                      />
+                      <input
+                        type="text"
+                        value={person.relationship}
+                        onChange={(e) => updatePerson(index, 'relationship', e.target.value)}
+                        placeholder="Relationship"
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                      />
+                      <input
+                        type="email"
+                        value={person.email}
+                        onChange={(e) => updatePerson(index, 'email', e.target.value)}
+                        placeholder="Email"
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                      />
                     </div>
+                    <button
+                      onClick={() => removePerson(index)}
+                      className="p-2 text-slate-400 hover:text-red-400 transition-colors flex-shrink-0"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                </div>
+              ))}
+            </div>
+          </CollapsibleSection>
 
           {/* Location Section */}
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">📍</span>
-                  <label className="text-sm font-medium text-white">Location</label>
+          <CollapsibleSection
+            icon="📍"
+            title="Location"
+            subtitle="Where you're based, timezone"
+            onAdd={() => addSectionItem('location')}
+            addLabel="Add Location"
+            isEmpty={knowledgeSections.location.length === 0}
+            emptyMessage="Add your location for weather updates and timezone awareness"
+            itemCount={knowledgeSections.location.length}
+          >
+            <div className="space-y-2">
+              {knowledgeSections.location.map((item, index) => (
+                <div key={index} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => updateSectionItem('location', index, e.target.value)}
+                    placeholder="e.g. Based in London, UK"
+                    className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  />
+                  <button
+                    onClick={() => removeSectionItem('location', index)}
+                    className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-                <span className="text-xs text-slate-500 ml-6 sm:ml-0">Where you're based, timezone</span>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => addSectionItem('location')} className="text-purple-400 hover:text-purple-300 self-start sm:self-auto">
-                <Plus className="w-4 h-4 mr-1" />
-                Add
-              </Button>
+              ))}
             </div>
-            {knowledgeSections.location.length === 0 ? (
-              <p className="text-sm text-slate-500 italic">No location info added yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {knowledgeSections.location.map((item, index) => (
-                  <div key={index} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={item}
-                      onChange={(e) => updateSectionItem('location', index, e.target.value)}
-                      placeholder="e.g. Based in London, UK"
-                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                    />
-                    <button
-                      onClick={() => removeSectionItem('location', index)}
-                      className="p-2 text-slate-400 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          </CollapsibleSection>
 
           {/* Schedule Section */}
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">📅</span>
-                  <label className="text-sm font-medium text-white">Schedule</label>
+          <CollapsibleSection
+            icon="📅"
+            title="Schedule"
+            subtitle="Work hours, recurring meetings"
+            onAdd={() => addSectionItem('schedule')}
+            addLabel="Add Schedule"
+            isEmpty={knowledgeSections.schedule.length === 0}
+            emptyMessage="Add recurring events so Navi knows your routine"
+            itemCount={knowledgeSections.schedule.length}
+          >
+            <div className="space-y-2">
+              {knowledgeSections.schedule.map((item, index) => (
+                <div key={index} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => updateSectionItem('schedule', index, e.target.value)}
+                    placeholder="e.g. Team standup every Monday at 10am"
+                    className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  />
+                  <button
+                    onClick={() => removeSectionItem('schedule', index)}
+                    className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-                <span className="text-xs text-slate-500 ml-6 sm:ml-0">Work hours, recurring meetings</span>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => addSectionItem('schedule')} className="text-purple-400 hover:text-purple-300 self-start sm:self-auto">
-                <Plus className="w-4 h-4 mr-1" />
-                Add
-              </Button>
+              ))}
             </div>
-            {knowledgeSections.schedule.length === 0 ? (
-              <p className="text-sm text-slate-500 italic">No schedule info added yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {knowledgeSections.schedule.map((item, index) => (
-                  <div key={index} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={item}
-                      onChange={(e) => updateSectionItem('schedule', index, e.target.value)}
-                      placeholder="e.g. Team standup every Monday at 10am"
-                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                    />
-                    <button
-                      onClick={() => removeSectionItem('schedule', index)}
-                      className="p-2 text-slate-400 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          </CollapsibleSection>
 
           {/* Projects Section */}
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">💼</span>
-                  <label className="text-sm font-medium text-white">Projects</label>
+          <CollapsibleSection
+            icon="💼"
+            title="Projects"
+            subtitle="Current work, deadlines"
+            onAdd={() => addSectionItem('projects')}
+            addLabel="Add Project"
+            isEmpty={knowledgeSections.projects.length === 0}
+            emptyMessage="Add projects so Navi can help track deadlines"
+            itemCount={knowledgeSections.projects.length}
+          >
+            <div className="space-y-2">
+              {knowledgeSections.projects.map((item, index) => (
+                <div key={index} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => updateSectionItem('projects', index, e.target.value)}
+                    placeholder="e.g. Website redesign - deadline March 15"
+                    className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  />
+                  <button
+                    onClick={() => removeSectionItem('projects', index)}
+                    className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-                <span className="text-xs text-slate-500 ml-6 sm:ml-0">Current work, deadlines</span>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => addSectionItem('projects')} className="text-purple-400 hover:text-purple-300 self-start sm:self-auto">
-                <Plus className="w-4 h-4 mr-1" />
-                Add
-              </Button>
+              ))}
             </div>
-            {knowledgeSections.projects.length === 0 ? (
-              <p className="text-sm text-slate-500 italic">No projects added yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {knowledgeSections.projects.map((item, index) => (
-                  <div key={index} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={item}
-                      onChange={(e) => updateSectionItem('projects', index, e.target.value)}
-                      placeholder="e.g. Website redesign - deadline March 15"
-                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                    />
-                    <button
-                      onClick={() => removeSectionItem('projects', index)}
-                      className="p-2 text-slate-400 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          </CollapsibleSection>
 
           {/* Preferences Section */}
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">⚙️</span>
-                  <label className="text-sm font-medium text-white">Preferences</label>
+          <CollapsibleSection
+            icon="⚙️"
+            title="Preferences"
+            subtitle="How you like things done"
+            onAdd={() => addSectionItem('preferences')}
+            addLabel="Add Preference"
+            isEmpty={knowledgeSections.preferences.length === 0}
+            emptyMessage="Add preferences to personalize how Navi helps you"
+            itemCount={knowledgeSections.preferences.length}
+          >
+            <div className="space-y-2">
+              {knowledgeSections.preferences.map((item, index) => (
+                <div key={index} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => updateSectionItem('preferences', index, e.target.value)}
+                    placeholder="e.g. Keep emails concise and professional"
+                    className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  />
+                  <button
+                    onClick={() => removeSectionItem('preferences', index)}
+                    className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-                <span className="text-xs text-slate-500 ml-6 sm:ml-0">How you like things done</span>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => addSectionItem('preferences')} className="text-purple-400 hover:text-purple-300 self-start sm:self-auto">
-                <Plus className="w-4 h-4 mr-1" />
-                Add
-              </Button>
+              ))}
             </div>
-            {knowledgeSections.preferences.length === 0 ? (
-              <p className="text-sm text-slate-500 italic">No preferences added yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {knowledgeSections.preferences.map((item, index) => (
-                  <div key={index} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={item}
-                      onChange={(e) => updateSectionItem('preferences', index, e.target.value)}
-                      placeholder="e.g. Keep emails concise and professional"
-                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                    />
-                    <button
-                      onClick={() => removeSectionItem('preferences', index)}
-                      className="p-2 text-slate-400 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          </CollapsibleSection>
 
           {/* Goals Section */}
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">🎯</span>
-                  <label className="text-sm font-medium text-white">Goals</label>
+          <CollapsibleSection
+            icon="🎯"
+            title="Goals"
+            subtitle="What you're working towards"
+            onAdd={() => addSectionItem('goals')}
+            addLabel="Add Goal"
+            isEmpty={knowledgeSections.goals.length === 0}
+            emptyMessage="Add goals so Navi can help you stay on track"
+            itemCount={knowledgeSections.goals.length}
+          >
+            <div className="space-y-2">
+              {knowledgeSections.goals.map((item, index) => (
+                <div key={index} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => updateSectionItem('goals', index, e.target.value)}
+                    placeholder="e.g. Complete project certification by Q2"
+                    className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  />
+                  <button
+                    onClick={() => removeSectionItem('goals', index)}
+                    className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-                <span className="text-xs text-slate-500 ml-6 sm:ml-0">What you're working towards</span>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => addSectionItem('goals')} className="text-purple-400 hover:text-purple-300 self-start sm:self-auto">
-                <Plus className="w-4 h-4 mr-1" />
-                Add
-              </Button>
+              ))}
             </div>
-            {knowledgeSections.goals.length === 0 ? (
-              <p className="text-sm text-slate-500 italic">No goals added yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {knowledgeSections.goals.map((item, index) => (
-                  <div key={index} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={item}
-                      onChange={(e) => updateSectionItem('goals', index, e.target.value)}
-                      placeholder="e.g. Complete project certification by Q2"
-                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                    />
-                    <button
-                      onClick={() => removeSectionItem('goals', index)}
-                      className="p-2 text-slate-400 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          </CollapsibleSection>
 
           {/* Other Section */}
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">📝</span>
-                  <label className="text-sm font-medium text-white">Other</label>
+          <CollapsibleSection
+            icon="📝"
+            title="Other"
+            subtitle="Anything else Navi should know"
+            onAdd={() => addSectionItem('other')}
+            addLabel="Add Info"
+            isEmpty={knowledgeSections.other.length === 0}
+            emptyMessage="Add any other info that might be helpful"
+            itemCount={knowledgeSections.other.length}
+          >
+            <div className="space-y-2">
+              {knowledgeSections.other.map((item, index) => (
+                <div key={index} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => updateSectionItem('other', index, e.target.value)}
+                    placeholder="Any other information..."
+                    className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  />
+                  <button
+                    onClick={() => removeSectionItem('other', index)}
+                    className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-                <span className="text-xs text-slate-500 ml-6 sm:ml-0">Anything else Navi should know</span>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => addSectionItem('other')} className="text-purple-400 hover:text-purple-300 self-start sm:self-auto">
-                <Plus className="w-4 h-4 mr-1" />
-                Add
-              </Button>
+              ))}
             </div>
-            {knowledgeSections.other.length === 0 ? (
-              <p className="text-sm text-slate-500 italic">No other info added yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {knowledgeSections.other.map((item, index) => (
-                  <div key={index} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={item}
-                      onChange={(e) => updateSectionItem('other', index, e.target.value)}
-                      placeholder="Any other information..."
-                      className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                    />
-                    <button
-                      onClick={() => removeSectionItem('other', index)}
-                      className="p-2 text-slate-400 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          </CollapsibleSection>
         </CardContent>
       </Card>
 
@@ -707,8 +652,12 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 text-sm text-slate-300">
-            <p className="font-medium text-white mb-1">How it works:</p>
-            <p>When Navi sends emails on your behalf, this signature will be automatically added at the end.</p>
+            <p className="font-medium text-white mb-2">How it works:</p>
+            <ul className="space-y-1 text-slate-400">
+              <li>When Navi sends emails, this signature is automatically added</li>
+              <li>Links are supported: <code className="text-blue-400 bg-slate-700 px-1 rounded">https://example.com</code></li>
+              <li>Or use markdown: <code className="text-blue-400 bg-slate-700 px-1 rounded">[My Website](https://example.com)</code></li>
+            </ul>
           </div>
 
           <div>

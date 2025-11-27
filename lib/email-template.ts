@@ -7,14 +7,37 @@ function capitalizeFirst(text: string): string {
 }
 
 /**
+ * Convert markdown-style links and plain URLs to HTML links
+ * Supports: [text](url) and plain URLs (http/https)
+ */
+function convertLinksToHTML(text: string): string {
+  // First, convert markdown links [text](url)
+  let result = text.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g,
+    '<a href="$2" style="color: #0066cc; text-decoration: underline;">$1</a>'
+  );
+
+  // Then, convert plain URLs (but not ones already in href="")
+  // This regex matches URLs not preceded by href=" or ">
+  result = result.replace(
+    /(?<!href="|>)(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" style="color: #0066cc; text-decoration: underline;">$1</a>'
+  );
+
+  return result;
+}
+
+/**
  * Generate HTML email template for user-sent emails (no branding)
  */
 export function generateEmailHTML(body: string, signature?: string): string {
   // Capitalize first letter and convert newlines to <br> tags for body
   const htmlBody = capitalizeFirst(body).replace(/\n/g, '<br>');
 
-  // Convert newlines to <br> tags for signature
-  const htmlSignature = signature ? signature.replace(/\n/g, '<br>') : '';
+  // Convert newlines to <br> tags and links to HTML for signature
+  const htmlSignature = signature
+    ? convertLinksToHTML(signature.replace(/\n/g, '<br>'))
+    : '';
 
   return `
 <!DOCTYPE html>
