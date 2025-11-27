@@ -7,9 +7,19 @@ import { motion } from 'framer-motion';
 interface VoiceInputProps {
   onTranscript: (text: string) => void;
   disabled?: boolean;
+  showSuggestions?: boolean;
 }
 
-export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
+// Voice command suggestions for new users
+const VOICE_SUGGESTIONS = [
+  { text: 'Hello Navi', icon: '👋', description: 'Start a conversation' },
+  { text: 'Add a task to review the project', icon: '📝', description: 'Create tasks' },
+  { text: 'What\'s on my calendar today?', icon: '📅', description: 'Check schedule' },
+  { text: 'Send an email to John about the meeting', icon: '📧', description: 'Send emails' },
+  { text: 'Remember that my meeting is at 3pm', icon: '🧠', description: 'Save info' },
+];
+
+export default function VoiceInput({ onTranscript, disabled, showSuggestions = false }: VoiceInputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -175,6 +185,35 @@ export default function VoiceInput({ onTranscript, disabled }: VoiceInputProps) 
           <p className="text-gray-400">Click to start speaking</p>
         )}
       </div>
+
+      {/* Voice Suggestions */}
+      {showSuggestions && !isRecording && !isProcessing && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="w-full max-w-md mt-8"
+        >
+          <p className="text-sm text-gray-500 text-center mb-3">Try saying:</p>
+          <div className="space-y-2">
+            {VOICE_SUGGESTIONS.map((suggestion, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 + index * 0.1 }}
+                className="flex items-center gap-3 px-4 py-2.5 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-blue-500/30 transition-colors"
+              >
+                <span className="text-lg">{suggestion.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm truncate">"{suggestion.text}"</p>
+                </div>
+                <span className="text-xs text-slate-500 hidden sm:block">{suggestion.description}</span>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }

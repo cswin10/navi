@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase-browser'
 import { Sparkles, Home, CheckSquare, FileText, Bell, User, Settings, LogOut, Mic, Plug, Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import FloatingVoiceButton from '@/components/dashboard/FloatingVoiceButton'
 
 const navigation = [
   { name: 'Home', href: '/dashboard', icon: Home },
@@ -169,6 +170,9 @@ export default function DashboardLayout({
           </div>
         </div>
       </div>
+
+      {/* Floating Voice Button - visible on all dashboard pages */}
+      <FloatingVoiceButton />
     </div>
   )
 }
