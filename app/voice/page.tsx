@@ -174,6 +174,23 @@ export default function VoicePage() {
         );
 
         if (needsConfirmation) {
+          // Generate brief confirmation TTS for multiple intents
+          try {
+            const confirmSpeakResponse = await fetch('/api/speak', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: 'Okay, just to confirm' }),
+            });
+            const confirmSpeakData = await confirmSpeakResponse.json();
+            if (confirmSpeakData.success && confirmSpeakData.audioUrl) {
+              setActionState((prev) => ({
+                ...prev,
+                audioUrl: confirmSpeakData.audioUrl,
+              }));
+            }
+          } catch {
+            // TTS is non-critical
+          }
           setAppState('confirming');
         } else {
           // Auto-execute all intents
@@ -213,6 +230,23 @@ export default function VoicePage() {
         await handleConfirm(processData.intent);
       } else {
         // Actions (create_task, send_email, add_calendar_event, timeblock_day, update_task): Require confirmation
+        // Generate brief confirmation TTS
+        try {
+          const confirmSpeakResponse = await fetch('/api/speak', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: 'Okay, just to confirm' }),
+          });
+          const confirmSpeakData = await confirmSpeakResponse.json();
+          if (confirmSpeakData.success && confirmSpeakData.audioUrl) {
+            setActionState((prev) => ({
+              ...prev,
+              audioUrl: confirmSpeakData.audioUrl,
+            }));
+          }
+        } catch {
+          // TTS is non-critical
+        }
         setAppState('confirming');
       }
     } catch (error: any) {

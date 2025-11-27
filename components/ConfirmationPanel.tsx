@@ -283,9 +283,13 @@ export default function ConfirmationPanel({
     }
   }, [audioUrl]);
 
-  // Don't auto-play audio during confirmation - only speak after execution
-  // This prevents duplicate responses (e.g., "I'll add X" then "X added")
-  // Users can still see the response text on screen
+  // Auto-play the brief confirmation audio ("Okay, just to confirm")
+  useEffect(() => {
+    if (audioUrl && audioRef.current && !hasPlayedAudio && audioUrl === initialAudioUrlRef.current && !isExecuting) {
+      setHasPlayedAudio(true);
+      audioRef.current.play().catch(() => {});
+    }
+  }, [audioUrl, hasPlayedAudio, isExecuting]);
 
   const handleAudioPlay = () => setIsPlaying(true);
   const handleAudioEnded = () => setIsPlaying(false);
@@ -311,9 +315,9 @@ export default function ConfirmationPanel({
   // Handle confirm with edited data
   const handleConfirm = () => {
     if (hasMultiple) {
-      // For multiple intents, we'd need to update the voice page to handle this
-      // For now, just confirm with edited intents
-      onConfirm(editedIntents[0]); // Simplified - would need parent changes for full support
+      // For multiple intents, pass undefined to trigger handleConfirmMultiple in voice page
+      // The voice page will use the stored intents array
+      onConfirm(undefined);
     } else {
       onConfirm(editedIntent);
     }
