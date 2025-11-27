@@ -334,7 +334,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 lg:space-y-8 pb-28 sm:pb-24 overscroll-contain">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8 pb-24 sm:pb-20">
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-1 sm:mb-2">Profile</h1>
@@ -871,8 +871,8 @@ john@company.com
         </div>
       )}
 
-      {/* Sticky Save Button */}
-      <div className="sticky bottom-4 z-10 flex justify-center sm:justify-end px-4 sm:px-0 pb-safe pointer-events-none">
+      {/* Fixed Save Button on mobile, sticky on desktop */}
+      <div className="fixed sm:sticky bottom-0 left-0 right-0 sm:bottom-4 z-50 sm:z-10 flex justify-center sm:justify-end p-4 sm:px-0 bg-gradient-to-t from-slate-900 via-slate-900/95 to-transparent sm:bg-none pointer-events-none">
         <div className="pointer-events-auto">
         <div className={`backdrop-blur-sm border rounded-xl p-3 shadow-2xl transition-all duration-300 ${
           saved
