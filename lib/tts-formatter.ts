@@ -19,9 +19,28 @@ export function formatForTTS(text: string): string {
     }
   );
 
-  // Format standalone times (e.g., "9am" → "9 AM", "14:30" → "2:30 PM")
-  formatted = formatted.replace(/\b(\d{1,2}):(\d{2})(am|pm)\b/gi, '$1 $2 $3');
-  formatted = formatted.replace(/\b(\d{1,2})(am|pm)\b/gi, '$1 $3');
+  // Format 24-hour times to spoken 12-hour format (e.g., "13:00" → "1 PM", "09:30" → "9:30 AM")
+  formatted = formatted.replace(/\b(\d{1,2}):(\d{2})\b(?!\s*(am|pm))/gi, (match, hour, minutes) => {
+    const h = parseInt(hour);
+    if (h >= 0 && h <= 23) {
+      const period = h >= 12 ? 'PM' : 'AM';
+      const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      if (minutes === '00') {
+        return `${hour12} ${period}`;
+      }
+      return `${hour12}:${minutes} ${period}`;
+    }
+    return match;
+  });
+
+  // Format standalone times with am/pm (e.g., "9am" → "9 AM", "2:30pm" → "2:30 PM")
+  formatted = formatted.replace(/\b(\d{1,2}):(\d{2})(am|pm)\b/gi, (match, hour, minutes, period) => {
+    if (minutes === '00') {
+      return `${hour} ${period.toUpperCase()}`;
+    }
+    return `${hour}:${minutes} ${period.toUpperCase()}`;
+  });
+  formatted = formatted.replace(/\b(\d{1,2})(am|pm)\b/gi, '$1 $2');
 
   // Format dates (ISO format → natural)
   formatted = formatted.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, (match, year, month, day) => {
@@ -51,6 +70,22 @@ export function formatForTTS(text: string): string {
 
   // Format percentages (e.g., "50%" → "50 percent")
   formatted = formatted.replace(/(\d+)%/g, '$1 percent');
+
+  // Format email addresses for natural speech (e.g., "john@gmail.com" → "john at gmail dot com")
+  formatted = formatted.replace(/([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+)\.([a-zA-Z]{2,})/g,
+    (match, localPart, domain, tld) => {
+      // Format local part - spell out dots and special chars
+      const formattedLocal = localPart
+        .replace(/\./g, ' dot ')
+        .replace(/_/g, ' underscore ')
+        .replace(/-/g, ' dash ');
+
+      // Format domain
+      const formattedDomain = domain.replace(/\./g, ' dot ');
+
+      return `${formattedLocal} at ${formattedDomain} dot ${tld}`;
+    }
+  );
 
   // Remove excessive line breaks (newlines should be brief pauses)
   formatted = formatted.replace(/\n{3,}/g, '.\n\n'); // Multiple breaks → single break with period

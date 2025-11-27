@@ -283,12 +283,9 @@ export default function ConfirmationPanel({
     }
   }, [audioUrl]);
 
-  useEffect(() => {
-    if (audioUrl && audioRef.current && !hasPlayedAudio && audioUrl === initialAudioUrlRef.current && !isExecuting) {
-      setHasPlayedAudio(true);
-      audioRef.current.play().catch(() => {});
-    }
-  }, [audioUrl, hasPlayedAudio, isExecuting]);
+  // Don't auto-play audio during confirmation - only speak after execution
+  // This prevents duplicate responses (e.g., "I'll add X" then "X added")
+  // Users can still see the response text on screen
 
   const handleAudioPlay = () => setIsPlaying(true);
   const handleAudioEnded = () => setIsPlaying(false);
@@ -350,11 +347,11 @@ export default function ConfirmationPanel({
       className="w-full max-w-2xl mx-auto"
     >
       <div className="bg-gradient-to-br from-blue-900/50 to-purple-900/50 backdrop-blur-sm rounded-lg p-4 sm:p-6 border border-blue-700/50">
-        {/* Voice indicator */}
+        {/* Confirmation header */}
         <div className="flex items-center gap-2 mb-3 sm:mb-4">
-          <Volume2 className={`w-4 h-4 sm:w-5 sm:h-5 ${isPlaying ? 'text-blue-400 animate-pulse' : 'text-gray-400'}`} />
-          <p className="text-xs sm:text-sm text-gray-400">
-            {isPlaying ? 'Playing...' : audioUrl ? 'Voice response ready' : 'Generating voice...'}
+          <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+          <p className="text-xs sm:text-sm text-blue-400 font-medium">
+            Please confirm
           </p>
         </div>
 
