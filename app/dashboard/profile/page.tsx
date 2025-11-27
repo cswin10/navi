@@ -48,18 +48,23 @@ function parseKnowledgeBase(kb: string): KnowledgeSections {
 
   if (!kb) return sections
 
-  // Parse markdown-style sections
-  const sectionRegex = /## (People|Location|Schedule|Projects|Preferences|Goals|Other)\n([\s\S]*?)(?=\n## |$)/gi
+  // Parse markdown-style sections (including Contacts and Important Contacts as aliases for People)
+  const sectionRegex = /## (People|Contacts|Important Contacts|Location|Schedule|Projects|Preferences|Goals|Other)\n([\s\S]*?)(?=\n## |$)/gi
   let match
 
   while ((match = sectionRegex.exec(kb)) !== null) {
-    const sectionName = match[1].toLowerCase() as keyof KnowledgeSections
+    const rawSectionName = match[1].toLowerCase()
+    // Map "contacts" and "important contacts" to "people"
+    const sectionName = (rawSectionName === 'contacts' || rawSectionName === 'important contacts')
+      ? 'people'
+      : rawSectionName as keyof KnowledgeSections
     const content = match[2].trim()
 
     if (sectionName === 'people') {
       // Parse people entries: "Name (relationship) - email" or "Name - relationship - email"
-      const lines = content.split('\n').filter(l => l.trim())
-      sections.people = lines.map(line => {
+      // Also filter out metadata lines like "[Added: 27/11/2024]"
+      const lines = content.split('\n').filter(l => l.trim() && !l.trim().startsWith('['))
+      const newPeople = lines.map(line => {
         // Try to parse structured format: "Name (relationship) - email@example.com"
         const structuredMatch = line.match(/^(.+?)\s*\((.+?)\)\s*-?\s*(.*)$/)
         if (structuredMatch) {
@@ -78,12 +83,24 @@ function parseKnowledgeBase(kb: string): KnowledgeSections {
             email: dashMatch[3].trim(),
           }
         }
+        // Try format: "Name: email@example.com" (common from voice input)
+        const colonMatch = line.match(/^(.+?):\s*(.+@.+)$/)
+        if (colonMatch) {
+          return {
+            name: colonMatch[1].trim(),
+            relationship: '',
+            email: colonMatch[2].trim(),
+          }
+        }
         // Fallback: treat whole line as name
         return { name: line.trim(), relationship: '', email: '' }
       })
+      // Append to existing people (in case of multiple People/Contacts sections)
+      sections.people = [...sections.people, ...newPeople]
     } else {
-      // Parse other sections as array of lines
-      sections[sectionName] = content.split('\n').filter(l => l.trim())
+      // Parse other sections as array of lines (filter out metadata)
+      const items = content.split('\n').filter(l => l.trim() && !l.trim().startsWith('['))
+      sections[sectionName] = [...sections[sectionName], ...items]
     }
   }
 
@@ -317,7 +334,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 lg:space-y-8 pb-24 sm:pb-20">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8 pb-28 sm:pb-24 overscroll-contain">
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-1 sm:mb-2">Profile</h1>
@@ -855,7 +872,8 @@ john@company.com
       )}
 
       {/* Sticky Save Button */}
-      <div className="sticky bottom-6 sm:bottom-4 z-10 flex justify-center sm:justify-end px-4 sm:px-0 pb-safe">
+      <div className="sticky bottom-4 z-10 flex justify-center sm:justify-end px-4 sm:px-0 pb-safe pointer-events-none">
+        <div className="pointer-events-auto">
         <div className={`backdrop-blur-sm border rounded-xl p-3 shadow-2xl transition-all duration-300 ${
           saved
             ? 'bg-green-600/95 border-green-500'
@@ -884,6 +902,7 @@ john@company.com
               </>
             )}
           </Button>
+        </div>
         </div>
       </div>
 
