@@ -605,7 +605,7 @@ export default function VoicePage() {
                 {actionState.intent.response?.includes('?') ? (
                   <div className="flex items-center gap-2 text-sm text-blue-400">
                     <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                    <p>Press and hold to respond...</p>
+                    <p>Click the mic to respond...</p>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 text-sm text-gray-400">
@@ -702,7 +702,7 @@ export default function VoicePage() {
           transition={{ delay: 0.5 }}
           className="text-center mt-16 text-gray-600 text-sm"
         >
-          <p>Press and hold the button to speak your command</p>
+          <p>Click the microphone to speak your command</p>
           <p className="mt-1">Powered by OpenAI Whisper • Anthropic Claude • ElevenLabs</p>
         </motion.div>
       </div>
