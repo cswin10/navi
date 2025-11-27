@@ -156,12 +156,33 @@ function CalendarEventEditor({
   params: AddCalendarEventParams;
   onChange: (params: AddCalendarEventParams) => void;
 }) {
+  // Format date for display (handle 'today', 'tomorrow', or ISO date)
+  const formatDateDisplay = (date?: string): string => {
+    if (!date) return '';
+    if (date === 'today' || date === 'tomorrow') return date;
+    // ISO date format - parse and show nicely
+    const d = new Date(date + 'T00:00:00');
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+    return date;
+  };
+
   return (
     <div className="space-y-3">
       <EditableField
         label="Title"
         value={params.title}
         onChange={(v) => onChange({ ...params, title: v })}
+      />
+      <EditableField
+        label="Date"
+        value={formatDateDisplay(params.date)}
+        onChange={(v) => onChange({ ...params, date: v || undefined })}
       />
       <div className="grid grid-cols-2 gap-3">
         <EditableField
@@ -257,6 +278,19 @@ function getIntentIcon(intentType: string): string {
     remember: '🧠',
   };
   return icons[intentType] || '✨';
+}
+
+// Get human-readable label for intent type
+function getIntentLabel(intentType: string): string {
+  const labels: Record<string, string> = {
+    create_task: 'New Task',
+    send_email: 'Send Email',
+    add_calendar_event: 'Calendar Event',
+    create_note: 'New Note',
+    timeblock_day: 'Time Blocks',
+    remember: 'Remember Info',
+  };
+  return labels[intentType] || intentType.replace(/_/g, ' ');
 }
 
 export default function ConfirmationPanel({
@@ -384,8 +418,8 @@ export default function ConfirmationPanel({
           <div className="bg-black/30 rounded-lg p-4 mb-4">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-lg">{getIntentIcon(editedIntent.intent)}</span>
-              <span className="text-sm font-medium text-blue-400 capitalize">
-                {editedIntent.intent.replace(/_/g, ' ')}
+              <span className="text-sm font-medium text-blue-400">
+                {getIntentLabel(editedIntent.intent)}
               </span>
             </div>
             {renderEditor(editedIntent)}
@@ -398,7 +432,7 @@ export default function ConfirmationPanel({
             <div className="flex items-center gap-2 mb-3">
               <span className="text-lg">{getIntentIcon(singleIntent.intent)}</span>
               <span className="text-sm font-medium text-blue-400">
-                Action {index + 1}: {singleIntent.intent.replace(/_/g, ' ')}
+                {index + 1}. {getIntentLabel(singleIntent.intent)}
               </span>
             </div>
             {renderEditor(singleIntent, index)}
