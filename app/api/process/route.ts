@@ -58,6 +58,7 @@ IMPORTANT RULES:
 - For dates: Use ISO format (YYYY-MM-DD) in due_date field
 - When user says "remember that...", "note that...", "keep in mind...", use intent "remember"
 - PROFILE UPDATES: When user says "add to my profile", "save to my profile", "update my profile with...", "remember this about me", use intent "remember" (NOT create_task)
+- CONTACTS: When user says "add to my contacts", "save this contact", "add [name] to contacts", "[name]'s email/phone is...", use intent "remember" with section "Contacts" - NOT "Preferences"
 - When user says "create a note about...", "add to my [folder] folder", "note down...", use intent "create_note"
 - When user asks about weather, use intent "get_weather"
 - When user asks about news, use intent "get_news"
@@ -69,7 +70,7 @@ IMPORTANT RULES:
 - DELETE TASK: When user wants to delete/remove tasks (e.g., "delete all my tasks", "remove the demo task", "clear my tasks"), use "delete_task" - NOT delete_calendar_event
 - For timeblocking, parse multiple time blocks from natural language
 - MULTIPLE INTENTS: If user requests multiple actions (e.g., "add calendar event AND create a task"), return ARRAY of intents
-- MULTIPLE EVENTS ON DIFFERENT DAYS: If user wants events on different days (e.g., "meeting Thursday and call Friday"), MUST return multiple intents with separate dates for each
+- CRITICAL - MULTIPLE EVENTS ON DIFFERENT DAYS: When user wants events on DIFFERENT days (e.g., "event Friday and event Saturday"), you MUST use the multiple intents format with "intents": [] array. Each day needs its own separate add_calendar_event intent. A single add_calendar_event can only have ONE date. Never try to combine multiple days into one intent.
 - DO NOT ASSUME: Only do EXACTLY what the user asks. If they say "create a task to email John", just create the task - do NOT also draft the email. One request = one action unless they explicitly ask for multiple things.
 - CONTACT LOOKUP: For send_email, if user says a name instead of email (e.g., "email John about..."), put the NAME in the "to" field. The system will look up the email from the knowledge base.
 - COMPLETE TASK: When user wants to mark a task done/complete (e.g., "mark demo task as done", "complete the report task"), use "update_task" intent
@@ -174,7 +175,8 @@ OR MULTIPLE INTENTS (return array):
 Examples:
 - User: "create a task" → intent: "other", response: "What should the task be?"
 - User: "task about demo tomorrow" → intent: "create_task", response: "I'll create a task 'demo' due tomorrow. Proceed?"
-- User: "remember that John's email is john@company.com" → intent: "remember", response: "Got it! I'll remember John's email."
+- User: "remember that John's email is john@company.com" → intent: "remember", section: "Contacts", response: "Got it! I'll save John's contact."
+- User: "add Sarah to my contacts, her email is sarah@company.com" → intent: "remember", section: "Contacts", content: "Sarah: sarah@company.com", response: "I've added Sarah to your contacts."
 - User: "add to my profile that I prefer morning meetings" → intent: "remember", section: "Preferences", response: "I'll add that to your profile."
 - User: "save to my profile: my manager is Sarah" → intent: "remember", section: "Important Contacts", response: "Got it, I'll remember that."
 - User: "create a note about the quarterly planning session, we discussed budget increases and hiring 3 new engineers" → intent: "create_note", response: "I'll create that note for you."
@@ -212,14 +214,9 @@ Examples:
     ],
     "response": "I'll add the meeting at 3pm tomorrow and create a task to prepare slides."
   }
-- User: "add dentist appointment Thursday at 10am and gym Friday at 6pm" → MULTIPLE INTENTS (DIFFERENT DAYS):
-  {
-    "intents": [
-      {"intent": "add_calendar_event", "response": "Dentist added", "parameters": {"title": "Dentist appointment", "date": "2024-01-18", "start_time": "10am"}},
-      {"intent": "add_calendar_event", "response": "Gym added", "parameters": {"title": "Gym", "date": "2024-01-19", "start_time": "6pm"}}
-    ],
-    "response": "I'll add the dentist appointment on Thursday and gym on Friday."
-  }
+- User: "add dentist Thursday 10am and gym Friday 6pm" → MUST return {"intents": [{"intent": "add_calendar_event", "parameters": {"title": "Dentist", "date": "[Thursday's date]", "start_time": "10am"}}, {"intent": "add_calendar_event", "parameters": {"title": "Gym", "date": "[Friday's date]", "start_time": "6pm"}}], "response": "I'll add both events."}
+- User: "meeting Friday at 2pm and lunch Saturday at 12pm" → MUST return {"intents": [...two separate add_calendar_event intents with different dates...]}
+- User: "add event Friday and event Saturday" → MUST use intents array with TWO add_calendar_event intents (one per day)
 - User: "hi" → intent: "other", response: "Hey! What do you need?"`;
 }
 
