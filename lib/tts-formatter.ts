@@ -71,6 +71,22 @@ export function formatForTTS(text: string): string {
   // Format percentages (e.g., "50%" → "50 percent")
   formatted = formatted.replace(/(\d+)%/g, '$1 percent');
 
+  // Format email addresses for natural speech (e.g., "john@gmail.com" → "john at gmail dot com")
+  formatted = formatted.replace(/([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+)\.([a-zA-Z]{2,})/g,
+    (match, localPart, domain, tld) => {
+      // Format local part - spell out dots and special chars
+      const formattedLocal = localPart
+        .replace(/\./g, ' dot ')
+        .replace(/_/g, ' underscore ')
+        .replace(/-/g, ' dash ');
+
+      // Format domain
+      const formattedDomain = domain.replace(/\./g, ' dot ');
+
+      return `${formattedLocal} at ${formattedDomain} dot ${tld}`;
+    }
+  );
+
   // Remove excessive line breaks (newlines should be brief pauses)
   formatted = formatted.replace(/\n{3,}/g, '.\n\n'); // Multiple breaks → single break with period
   formatted = formatted.replace(/\n\n/g, '. '); // Double break → period and space
