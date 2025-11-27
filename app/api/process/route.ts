@@ -69,6 +69,7 @@ IMPORTANT RULES:
 - DELETE TASK: When user wants to delete/remove tasks (e.g., "delete all my tasks", "remove the demo task", "clear my tasks"), use "delete_task" - NOT delete_calendar_event
 - For timeblocking, parse multiple time blocks from natural language
 - MULTIPLE INTENTS: If user requests multiple actions (e.g., "add calendar event AND create a task"), return ARRAY of intents
+- MULTIPLE EVENTS ON DIFFERENT DAYS: If user wants events on different days (e.g., "meeting Thursday and call Friday"), MUST return multiple intents with separate dates for each
 - DO NOT ASSUME: Only do EXACTLY what the user asks. If they say "create a task to email John", just create the task - do NOT also draft the email. One request = one action unless they explicitly ask for multiple things.
 - CONTACT LOOKUP: For send_email, if user says a name instead of email (e.g., "email John about..."), put the NAME in the "to" field. The system will look up the email from the knowledge base.
 - COMPLETE TASK: When user wants to mark a task done/complete (e.g., "mark demo task as done", "complete the report task"), use "update_task" intent
@@ -210,6 +211,14 @@ Examples:
       {"intent": "create_task", "response": "Task created", "parameters": {"title": "Prepare slides", "priority": "medium"}}
     ],
     "response": "I'll add the meeting at 3pm tomorrow and create a task to prepare slides."
+  }
+- User: "add dentist appointment Thursday at 10am and gym Friday at 6pm" → MULTIPLE INTENTS (DIFFERENT DAYS):
+  {
+    "intents": [
+      {"intent": "add_calendar_event", "response": "Dentist added", "parameters": {"title": "Dentist appointment", "date": "2024-01-18", "start_time": "10am"}},
+      {"intent": "add_calendar_event", "response": "Gym added", "parameters": {"title": "Gym", "date": "2024-01-19", "start_time": "6pm"}}
+    ],
+    "response": "I'll add the dentist appointment on Thursday and gym on Friday."
   }
 - User: "hi" → intent: "other", response: "Hey! What do you need?"`;
 }

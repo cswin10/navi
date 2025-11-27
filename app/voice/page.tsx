@@ -566,10 +566,18 @@ export default function VoicePage() {
                 <div className="mb-4">
                   <p className="text-white text-lg leading-relaxed">{actionState.intent.response}</p>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  <p>Ready for your next request...</p>
-                </div>
+                {/* Check if Navi is asking a question (needs response) */}
+                {actionState.intent.response?.includes('?') ? (
+                  <div className="flex items-center gap-2 text-sm text-blue-400">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                    <p>Press and hold to respond...</p>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                    <p>Ready for your next request...</p>
+                  </div>
+                )}
                 {actionState.audioUrl && (
                   <audio
                     src={actionState.audioUrl}

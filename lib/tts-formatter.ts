@@ -19,9 +19,28 @@ export function formatForTTS(text: string): string {
     }
   );
 
-  // Format standalone times (e.g., "9am" → "9 AM", "14:30" → "2:30 PM")
-  formatted = formatted.replace(/\b(\d{1,2}):(\d{2})(am|pm)\b/gi, '$1 $2 $3');
-  formatted = formatted.replace(/\b(\d{1,2})(am|pm)\b/gi, '$1 $3');
+  // Format 24-hour times to spoken 12-hour format (e.g., "13:00" → "1 PM", "09:30" → "9:30 AM")
+  formatted = formatted.replace(/\b(\d{1,2}):(\d{2})\b(?!\s*(am|pm))/gi, (match, hour, minutes) => {
+    const h = parseInt(hour);
+    if (h >= 0 && h <= 23) {
+      const period = h >= 12 ? 'PM' : 'AM';
+      const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      if (minutes === '00') {
+        return `${hour12} ${period}`;
+      }
+      return `${hour12}:${minutes} ${period}`;
+    }
+    return match;
+  });
+
+  // Format standalone times with am/pm (e.g., "9am" → "9 AM", "2:30pm" → "2:30 PM")
+  formatted = formatted.replace(/\b(\d{1,2}):(\d{2})(am|pm)\b/gi, (match, hour, minutes, period) => {
+    if (minutes === '00') {
+      return `${hour} ${period.toUpperCase()}`;
+    }
+    return `${hour}:${minutes} ${period.toUpperCase()}`;
+  });
+  formatted = formatted.replace(/\b(\d{1,2})(am|pm)\b/gi, '$1 $2');
 
   // Format dates (ISO format → natural)
   formatted = formatted.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, (match, year, month, day) => {
