@@ -120,13 +120,6 @@ export default function LoginPage() {
               >
                 Sign In
               </Button>
-
-              <p className="text-center text-xs sm:text-sm text-slate-400">
-                Don't have an account?{' '}
-                <Link href="/signup" className="text-blue-400 hover:text-blue-300">
-                  Sign up
-                </Link>
-              </p>
             </form>
           </CardContent>
         </Card>
