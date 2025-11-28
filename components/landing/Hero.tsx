@@ -77,11 +77,10 @@ export function Hero() {
 
               <video
                 className="w-full h-full object-cover"
-                poster="/video-thumbnail.jpg"
                 controls
                 playsInline
               >
-                <source src="/demo-video.mp4" type="video/mp4" />
+                <source src="/1000023125.mp4" type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
             </div>
