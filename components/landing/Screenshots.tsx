@@ -1,32 +1,32 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Mic, Calendar, Mail, CheckSquare } from 'lucide-react'
+import { Mic, LayoutDashboard, FileText, User } from 'lucide-react'
 
 const screenshots = [
   {
     title: 'Voice Interface',
     description: 'Talk to Navi naturally and watch your requests come to life.',
     icon: Mic,
-    placeholder: 'voice-interface',
+    image: '/voice-page.png',
   },
   {
-    title: 'Task Management',
-    description: 'Create and manage tasks with priorities and due dates.',
-    icon: CheckSquare,
-    placeholder: 'task-management',
+    title: 'Dashboard',
+    description: 'See your tasks, calendar, and quick actions at a glance.',
+    icon: LayoutDashboard,
+    image: '/dashboard-page.png',
   },
   {
-    title: 'Calendar Integration',
-    description: 'View your schedule and add events with Google Calendar sync.',
-    icon: Calendar,
-    placeholder: 'calendar-view',
+    title: 'Notes',
+    description: 'Create and organize notes with voice or text.',
+    icon: FileText,
+    image: '/notes-page.png',
   },
   {
-    title: 'Email Drafting',
-    description: 'Send professional emails through Gmail with your voice.',
-    icon: Mail,
-    placeholder: 'email-drafting',
+    title: 'Profile & Knowledge',
+    description: 'Teach Navi about you so it can help you better.',
+    icon: User,
+    image: '/profile-page.png',
   },
 ]
 
@@ -62,20 +62,13 @@ export function Screenshots() {
               transition={{ delay: index * 0.1, duration: 0.6 }}
               className="group"
             >
-              {/* Screenshot placeholder */}
-              <div className="relative aspect-[16/10] rounded-xl overflow-hidden bg-slate-800/50 border border-slate-700 mb-4 group-hover:border-blue-500/50 transition-colors">
-                {/* Replace with actual screenshots */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
-                  <item.icon className="w-12 h-12 text-blue-400/50 mb-3" />
-                  <p className="text-slate-500 text-sm">Screenshot: {item.placeholder}.png</p>
-                </div>
-                {/* When you have screenshots, replace with:
+              {/* Screenshot */}
+              <div className="relative aspect-[16/10] rounded-xl overflow-hidden bg-slate-800/50 border border-slate-700 mb-4 group-hover:border-blue-500/50 transition-colors shadow-xl shadow-black/20">
                 <img
-                  src={`/screenshots/${item.placeholder}.png`}
+                  src={item.image}
                   alt={item.title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-top"
                 />
-                */}
               </div>
               <h3 className="text-lg sm:text-xl font-semibold text-white mb-1">
                 {item.title}

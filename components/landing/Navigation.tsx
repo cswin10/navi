@@ -28,11 +28,6 @@ export function Navigation() {
 
           {/* Nav Links */}
           <div className="flex items-center gap-2 sm:gap-4">
-            <Link href="/login" className="hidden sm:block">
-              <Button variant="ghost" size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
-                Sign In
-              </Button>
-            </Link>
             <Button
               size="sm"
               className="text-xs sm:text-sm px-3 sm:px-4"

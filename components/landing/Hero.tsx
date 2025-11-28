@@ -64,31 +64,27 @@ export function Hero() {
             Speak naturally and watch things happen. Send emails, manage your calendar, create tasks, and get real time information about your day. All with your voice.
           </motion.p>
 
-          {/* Video Placeholder */}
+          {/* Demo Video - Phone/Portrait Format */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.6 }}
             className="mb-8 sm:mb-10 lg:mb-12 px-4 sm:px-0"
           >
-            <div className="relative max-w-3xl mx-auto aspect-video rounded-xl overflow-hidden bg-slate-800/50 border border-slate-700">
-              {/* Video will go here - for now show placeholder */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-blue-500/20 flex items-center justify-center mb-4 cursor-pointer hover:bg-blue-500/30 transition-colors">
-                  <Play className="w-8 h-8 sm:w-10 sm:h-10 text-blue-400 ml-1" />
-                </div>
-                <p className="text-slate-400 text-sm sm:text-base">Watch Demo Video</p>
-              </div>
-              {/* When you have the video, replace the above with:
+            <div className="relative max-w-xs sm:max-w-sm mx-auto aspect-[9/16] rounded-2xl overflow-hidden bg-slate-800/50 border-4 border-slate-700 shadow-2xl shadow-blue-500/10">
+              {/* Phone frame effect */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-6 bg-slate-700 rounded-b-xl z-10" />
+
               <video
                 className="w-full h-full object-cover"
-                poster="/video-thumbnail.jpg"
                 controls
+                playsInline
               >
-                <source src="/demo-video.mp4" type="video/mp4" />
+                <source src="/1000023125.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
               </video>
-              */}
             </div>
+            <p className="text-slate-500 text-xs sm:text-sm mt-4 text-center">See Navi in action</p>
           </motion.div>
 
           {/* Waitlist Form */}
